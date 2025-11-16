@@ -1,0 +1,41 @@
+'use client'
+
+import { DashboardLayout } from '@/components/layout/dashboard-layout'
+import { PollFeed } from '@/components/poll/poll-feed'
+import { motion } from 'framer-motion'
+import { useState, useCallback } from 'react'
+
+export default function DashboardPage() {
+  const [pollsUpdated, setPollsUpdated] = useState(0)
+
+  const handlePollsRefresh = useCallback(() => {
+    setPollsUpdated(prev => prev + 1)
+  }, [])
+
+  return (
+    <DashboardLayout>
+      {/* Welcome Section */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-12 text-center"
+      >
+        <div className="card-elevated p-8 mb-8">
+          <h2 className="text-4xl md:text-5xl font-bold mb-4">
+            <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
+              Discover Polls
+            </span>
+          </h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Vote on interesting polls from the community and earn points
+          </p>
+        </div>
+      </motion.div>
+
+      {/* Polls Feed - Random polls from other users */}
+      <div className="relative">
+        <PollFeed key={pollsUpdated} onRefresh={handlePollsRefresh} showRandomPolls />
+      </div>
+    </DashboardLayout>
+  )
+}

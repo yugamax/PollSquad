@@ -1,0 +1,204 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* LinkedIn-style Color Palette */
+  --primary: #0A66C2;        /* LinkedIn blue */
+  --primary-light: #378FE9;
+  --primary-dark: #004182;
+  
+  --accent: #057642;         /* LinkedIn green */
+  --accent-light: #16A085;
+  --accent-dark: #044A29;
+  
+  --success: #057642;        /* Green */
+  --warning: #F5C542;        /* Amber */
+  --danger: #CC1016;         /* Red */
+  
+  --background: #F4F2EE;     /* LinkedIn light background */
+  --foreground: #000000;     /* Black text for light mode */
+  --card: #FFFFFF;
+  --card-foreground: #000000; /* Black text on cards */
+  --muted: #F3F2EF;
+  --muted-foreground: #4B5563; /* Dark gray text */
+  --border: #DFDBCE;
+  
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: #1B1F23;     /* LinkedIn dark background */
+  --foreground: #F1F5F9;     /* Lighter text for dark mode */
+  --card: #282E33;
+  --card-foreground: #F1F5F9; /* Lighter text on dark cards */
+  --muted: #38434F;
+  --muted-foreground: #CBD5E1; /* Much lighter gray text */
+  --border: #38434F;
+}
+
+@theme inline {
+  --font-sans: 'Geist', 'Geist Fallback';
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --color-primary: var(--primary);
+  --color-primary-foreground: white;
+  --color-accent: var(--accent);
+  --color-accent-foreground: white;
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground transition-colors duration-200;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold text-foreground;
+  }
+  input, textarea, select {
+    @apply text-foreground bg-card placeholder:text-muted-foreground;
+  }
+  button {
+    @apply text-foreground;
+  }
+  label {
+    @apply text-foreground;
+  }
+  p {
+    @apply text-foreground;
+  }
+  span {
+    @apply text-foreground;
+  }
+}
+
+@layer utilities {
+  .linkedin-shadow {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+  }
+  
+  .linkedin-shadow-hover:hover {
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
+    transform: translateY(-1px);
+  }
+
+  /* Background Animations */
+  @keyframes blob {
+    0% {
+      transform: translate(0px, 0px) scale(1);
+    }
+    33% {
+      transform: translate(30px, -50px) scale(1.1);
+    }
+    66% {
+      transform: translate(-20px, 20px) scale(0.9);
+    }
+    100% {
+      transform: translate(0px, 0px) scale(1);
+    }
+  }
+
+  @keyframes gradient {
+    0%, 100% {
+      background-size: 200% 200%;
+      background-position: left center;
+    }
+    50% {
+      background-size: 200% 200%;
+      background-position: right center;
+    }
+  }
+
+  .animate-blob {
+    animation: blob 7s infinite;
+  }
+
+  .animation-delay-2000 {
+    animation-delay: 2s;
+  }
+
+  .animation-delay-4000 {
+    animation-delay: 4s;
+  }
+
+  .animation-delay-1000 {
+    animation-delay: 1s;
+  }
+
+  .animate-gradient {
+    background-size: 200% 200%;
+    animation: gradient 3s ease-in-out infinite;
+  }
+
+  .animate-in {
+    animation-duration: 0.3s;
+    animation-fill-mode: both;
+  }
+
+  .slide-in-from-top-2 {
+    animation-name: slideInFromTop;
+  }
+
+  @keyframes slideInFromTop {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+@layer components {
+  .card-elevated {
+    @apply bg-card/80 backdrop-blur-xl border border-border/20 rounded-xl;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  }
+  
+  .btn-primary {
+    @apply bg-primary text-white px-6 py-3 rounded-xl font-semibold transition-all;
+    box-shadow: 0 4px 20px rgba(10, 102, 194, 0.3);
+  }
+  
+  .btn-primary:hover {
+    background-color: var(--primary-dark);
+    box-shadow: 0 8px 30px rgba(10, 102, 194, 0.4);
+    transform: translateY(-2px);
+  }
+  
+  .btn-secondary {
+    @apply bg-transparent text-primary border-2 border-primary px-6 py-3 rounded-xl font-semibold transition-all backdrop-blur-sm;
+  }
+  
+  .btn-secondary:hover {
+    @apply bg-primary text-white;
+    transform: translateY(-2px);
+  }
+
+  /* Dark mode specific improvements */
+  .dark .text-muted-foreground {
+    color: #CBD5E1;
+  }
+  
+  .dark .card-elevated {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  }
+}
