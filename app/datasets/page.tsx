@@ -35,11 +35,11 @@ export default function DatasetsPage() {
   return (
     <DashboardLayout>
       <div className="max-w-6xl mx-auto">
-        <div className="mb-8 mt-4">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-3">
+        <div className="mb-6 sm:mb-8 mt-2 sm:mt-4">
+          <h1 className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2 sm:mb-3 text-center sm:text-left">
             Dataset Collection
           </h1>
-          <p className="text-muted-foreground text-lg">
+          <p className="text-muted-foreground text-base sm:text-lg text-center sm:text-left">
             Access and download data from your polls
           </p>
         </div>
