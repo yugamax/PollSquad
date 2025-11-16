@@ -13,23 +13,23 @@ const baloo = Geist({ subsets: ["latin"], variable: '--font-comic' });
 export const metadata: Metadata = {
   title: 'PollSquad - Community Polling Platform',
   description: 'Vote, earn points, and boost your polls with PollSquad',
-  generator: 'v0.app',
+  generator: 'Next.js',
   icons: {
     icon: [
       {
-        url: '/icon-light-32x32.png',
+        url: '/polledin.png',
         media: '(prefers-color-scheme: light)',
       },
       {
-        url: '/icon-dark-32x32.png',
+        url: '/polledindark.png',
         media: '(prefers-color-scheme: dark)',
       },
       {
-        url: '/icon.svg',
+        url: '/polledinicon.svg',
         type: 'image/svg+xml',
       },
     ],
-    apple: '/apple-icon.png',
+    apple: '/polledin.png',
   },
 }
 
