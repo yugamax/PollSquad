@@ -4,12 +4,12 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* LinkedIn-style Color Palette */
-  --primary: #0A66C2;        /* LinkedIn blue */
-  --primary-light: #378FE9;
-  --primary-dark: #004182;
+  /* Custom Light Mode Color Palette */
+  --primary: #8CA9FF;        /* Primary blue */
+  --primary-light: #AAC4F5;  /* Lighter blue */
+  --primary-dark: #6B87E8;   /* Darker blue */
   
-  --accent: #057642;         /* LinkedIn green */
+  --accent: #057642;         /* Keep green accent */
   --accent-light: #16A085;
   --accent-dark: #044A29;
   
@@ -17,15 +17,15 @@
   --warning: #F5C542;        /* Amber */
   --danger: #CC1016;         /* Red */
   
-  --background: #F4F2EE;     /* LinkedIn light background */
-  --foreground: #000000;     /* Black text for light mode */
-  --card: #FFFFFF;
-  --card-foreground: #000000; /* Black text on cards */
-  --muted: #F3F2EF;
-  --muted-foreground: #4B5563; /* Dark gray text */
-  --border: #DFDBCE;
+  --background: #f6ff98;     /* Light cream background */
+  --foreground: #2D3748;     /* Dark text for good contrast */
+  --card: #ffffff;           /* Card background */
+  --card-foreground: #2D3748; /* Dark text on cards */
+  --muted: #76efff;          /* Muted background */
+  --muted-foreground: #000000; /* Muted text */
+  --border: #a2c3ff;         /* Border color */
   
-  --radius: 0.5rem;
+  --radius: 0.7rem;
 }
 
 .dark {
@@ -65,17 +65,42 @@
   * {
     @apply border-border;
   }
-  body {
-    @apply text-foreground transition-colors duration-200;
-    background-image: url('/colorbg.png');
+  
+  html {
+    position: relative;
+    min-height: 100vh;
+  }
+  
+  html::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url('/color1bg.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    filter: blur(1px) brightness(0.7);
+    z-index: -1;
+  }
+  
+  html.dark::before {
+    background-image: url('/nocolor1bg.png');
+    filter: blur(1px) brightness(0.6);
+    /* Force reload if cached */
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
     background-repeat: no-repeat;
   }
   
-  .dark body {
-    background-image: url('/nocolorbg.png');
+  body {
+    @apply text-foreground transition-colors duration-200;
+    background: transparent;
+    min-height: 100vh;
   }
   
   h1, h2, h3, h4, h5, h6 {
@@ -96,6 +121,7 @@
   span {
     @apply text-foreground;
   }
+
 }
 
 @layer utilities {
@@ -179,18 +205,18 @@
 
 @layer components {
   .card-elevated {
-    @apply bg-card/80 backdrop-blur-sm border border-border/20 rounded-xl;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    @apply bg-card/80 backdrop-blur-sm border border-border/30 rounded-xl;
+    box-shadow: 0 8px 32px rgba(140, 169, 255, 0.15);
   }
   
   .btn-primary {
     @apply bg-primary text-white px-6 py-3 rounded-xl font-semibold transition-all;
-    box-shadow: 0 4px 20px rgba(10, 102, 194, 0.3);
+    box-shadow: 0 4px 20px rgba(140, 169, 255, 0.4);
   }
   
   .btn-primary:hover {
     background-color: var(--primary-dark);
-    box-shadow: 0 8px 30px rgba(10, 102, 194, 0.4);
+    box-shadow: 0 8px 30px rgba(140, 169, 255, 0.5);
     transform: translateY(-2px);
   }
   

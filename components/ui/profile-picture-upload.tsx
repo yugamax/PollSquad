@@ -103,3 +103,6 @@ export function ProfilePictureUpload({ showCamera = true, size = 'md' }: Profile
     </div>
   )
 }
+
+// Usage example with size prop fixed
+<ProfilePictureUpload showCamera={false} size="sm" />

@@ -45,7 +45,7 @@ export function Sidebar({ onToggle }: SidebarProps) {
       {/* Sidebar Toggle Button */}
       <button
         onClick={toggleSidebar}
-        className="fixed top-6 left-6 z-30 p-3 bg-card/80 backdrop-blur-xl rounded-xl shadow-lg border border-border/20 text-foreground hover:bg-muted/50 transition-all hover:scale-105 w-[52px] h-[52px] flex items-center justify-center"
+        className="fixed top-6 left-6 z-30 p-3 bg-card/90 backdrop-blur-xl rounded-xl shadow-lg border border-border/30 text-foreground hover:bg-muted/70 transition-all hover:scale-105 w-[52px] h-[52px] flex items-center justify-center"
       >
         <Menu className="w-5 h-5" />
       </button>
@@ -65,7 +65,7 @@ export function Sidebar({ onToggle }: SidebarProps) {
         
         <div className="relative z-10">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-border/20">
+          <div className="flex items-center justify-between p-6 border-b border-border/30">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12">
                 <ProfilePictureUpload showCamera={false} size="sm" />
@@ -101,7 +101,7 @@ export function Sidebar({ onToggle }: SidebarProps) {
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all drop-shadow-sm ${
                     isActive 
                       ? 'bg-primary text-white shadow-lg' 
-                      : 'text-foreground hover:bg-card/30'
+                      : 'text-foreground hover:bg-card/50'
                   }`}
                 >
                   <Icon className="w-5 h-5" />
@@ -113,7 +113,7 @@ export function Sidebar({ onToggle }: SidebarProps) {
             {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-foreground hover:bg-card/30 mt-6 drop-shadow-sm"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-foreground hover:bg-card/50 mt-6 drop-shadow-sm"
             >
               {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               <span className="font-medium">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>

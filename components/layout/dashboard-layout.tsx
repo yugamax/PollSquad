@@ -46,8 +46,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           className={`fixed top-6 left-[85px] z-20 transition-opacity duration-300 cursor-pointer ${sidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
           onClick={handleProfileClick}
         >
-          <div className="w-[52px] h-[52px] bg-card/90 backdrop-blur-sm rounded-xl border border-border/20 shadow-lg p-1 hover:shadow-xl transition-all hover:scale-105">
-            <ProfilePictureUpload showCamera={false} size="sm" />
+          <div className="w-[52px] h-[52px] bg-card/90 backdrop-blur-sm rounded-xl border border-border/30 shadow-lg p-1 hover:shadow-xl transition-all hover:scale-105">
+            <ProfilePictureUpload showCamera={false} size="m" />
           </div>
         </div>
       )}
@@ -55,7 +55,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       {/* Points Display - Only on homepage, properly spaced after profile */}
       {isHomePage && (
         <div className={`fixed top-6 left-[144px] z-20 transition-opacity duration-300 ${sidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-          <div className="flex items-center gap-2 bg-card/90 backdrop-blur-sm rounded-xl px-3 py-3 border border-border/20 shadow-lg h-[52px]">
+          <div className="flex items-center gap-2 bg-card/90 backdrop-blur-sm rounded-xl px-3 py-3 border border-border/30 shadow-lg h-[52px]">
             <div className="relative">
               <Coins className="w-4 h-4 text-warning" />
               <div className="absolute inset-0 w-4 h-4 bg-warning/20 rounded-full blur-sm"></div>
@@ -71,7 +71,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       {/* Main Content */}
       <div className="min-h-screen">
         {/* Header */}
-        <header className="bg-card/80 backdrop-blur-sm border-b border-border/20 px-6 py-5">
+        <header className="bg-card/70 backdrop-blur-sm border-b border-border/30 px-6 py-5">
           <div className="flex items-center justify-center max-w-7xl mx-auto relative">
             {/* Centered Website Logo - Only on home page */}
             {isHomePage && (

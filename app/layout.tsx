@@ -43,9 +43,7 @@ export default function RootLayout({
       <body className={`font-sans antialiased min-h-screen`}>
         <ThemeProvider>
           <AuthProvider>
-            <div className="min-h-screen bg-background">
-              {children}
-            </div>
+            {children}
           </AuthProvider>
         </ThemeProvider>
         <Analytics />
