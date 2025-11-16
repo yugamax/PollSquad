@@ -66,8 +66,18 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground transition-colors duration-200;
+    @apply text-foreground transition-colors duration-200;
+    background-image: url('/colorbg.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
   }
+  
+  .dark body {
+    background-image: url('/nocolorbg.png');
+  }
+  
   h1, h2, h3, h4, h5, h6 {
     @apply font-semibold text-foreground;
   }
@@ -169,7 +179,7 @@
 
 @layer components {
   .card-elevated {
-    @apply bg-card/80 backdrop-blur-xl border border-border/20 rounded-xl;
+    @apply bg-card/80 backdrop-blur-sm border border-border/20 rounded-xl;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   }
   

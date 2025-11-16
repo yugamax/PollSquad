@@ -37,14 +37,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      {/* Abstract Background */}
-      <div className="fixed inset-0 -z-10">
-        <div className="absolute top-0 -left-4 w-72 h-72 bg-primary/20 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
-        <div className="absolute top-0 -right-4 w-72 h-72 bg-accent/20 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
-        <div className="absolute -bottom-8 left-20 w-72 h-72 bg-warning/20 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
-      </div>
-
+    <div className="min-h-screen relative">
       <Sidebar onToggle={setSidebarOpen} />
       
       {/* Profile Picture - Only on homepage, properly spaced and clickable */}
@@ -53,7 +46,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           className={`fixed top-6 left-[85px] z-20 transition-opacity duration-300 cursor-pointer ${sidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
           onClick={handleProfileClick}
         >
-          <div className="w-[52px] h-[52px] bg-card/90 backdrop-blur-xl rounded-xl border border-border/20 shadow-lg p-1 hover:shadow-xl transition-all hover:scale-105">
+          <div className="w-[52px] h-[52px] bg-card/90 backdrop-blur-sm rounded-xl border border-border/20 shadow-lg p-1 hover:shadow-xl transition-all hover:scale-105">
             <ProfilePictureUpload showCamera={false} size="sm" />
           </div>
         </div>
@@ -62,7 +55,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       {/* Points Display - Only on homepage, properly spaced after profile */}
       {isHomePage && (
         <div className={`fixed top-6 left-[144px] z-20 transition-opacity duration-300 ${sidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-          <div className="flex items-center gap-2 bg-card/90 backdrop-blur-xl rounded-xl px-3 py-3 border border-border/20 shadow-lg h-[52px]">
+          <div className="flex items-center gap-2 bg-card/90 backdrop-blur-sm rounded-xl px-3 py-3 border border-border/20 shadow-lg h-[52px]">
             <div className="relative">
               <Coins className="w-4 h-4 text-warning" />
               <div className="absolute inset-0 w-4 h-4 bg-warning/20 rounded-full blur-sm"></div>
@@ -78,7 +71,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       {/* Main Content */}
       <div className="min-h-screen">
         {/* Header */}
-        <header className="bg-card/80 backdrop-blur-xl border-b border-border/20 px-6 py-5">
+        <header className="bg-card/80 backdrop-blur-sm border-b border-border/20 px-6 py-5">
           <div className="flex items-center justify-center max-w-7xl mx-auto relative">
             {/* Centered Website Logo - Only on home page */}
             {isHomePage && (

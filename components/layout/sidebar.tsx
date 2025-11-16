@@ -51,63 +51,75 @@ export function Sidebar({ onToggle }: SidebarProps) {
       </button>
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-72 bg-card/80 backdrop-blur-xl border-r border-border/20 transform transition-all duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <div 
+        className={`fixed inset-y-0 left-0 z-50 w-72 border-r border-border/20 transform transition-all duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
+        style={{
+          backgroundImage: 'url(/sidebar.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      >
+        {/* Reduced overlay for better text readability */}
+        <div className="absolute inset-0 bg-card/40 backdrop-blur-none"></div>
         
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-border/20">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12">
-              <ProfilePictureUpload showCamera={false} size="sm" />
+        <div className="relative z-10">
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b border-border/20">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12">
+                <ProfilePictureUpload showCamera={false} size="sm" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground drop-shadow-sm">
+                  {user?.displayName || user?.email?.split('@')[0] || 'User'}
+                </h3>
+                <p className="text-xs text-muted-foreground drop-shadow-sm">Member</p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-semibold text-foreground">
-                {user?.displayName || user?.email?.split('@')[0] || 'User'}
-              </h3>
-              <p className="text-xs text-muted-foreground">Member</p>
-            </div>
+            <button
+              onClick={() => {
+                setIsOpen(false)
+                onToggle?.(false)
+              }}
+              className="text-muted-foreground hover:text-foreground p-2 hover:bg-muted/50 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
-          <button
-            onClick={() => {
-              setIsOpen(false)
-              onToggle?.(false)
-            }}
-            className="text-muted-foreground hover:text-foreground p-2 hover:bg-muted/50 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+
+          {/* Navigation */}
+          <nav className="p-6 space-y-2">
+            {menuItems.map((item) => {
+              const Icon = item.icon
+              const isActive = pathname === item.href
+              
+              return (
+                <button
+                  key={item.href}
+                  onClick={() => handleNavigation(item.href)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all drop-shadow-sm ${
+                    isActive 
+                      ? 'bg-primary text-white shadow-lg' 
+                      : 'text-foreground hover:bg-card/30'
+                  }`}
+                >
+                  <Icon className="w-5 h-5" />
+                  <span className="font-medium">{item.label}</span>
+                </button>
+              )
+            })}
+
+            {/* Theme Toggle */}
+            <button
+              onClick={toggleTheme}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-foreground hover:bg-card/30 mt-6 drop-shadow-sm"
+            >
+              {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              <span className="font-medium">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+            </button>
+          </nav>
         </div>
-
-        {/* Navigation */}
-        <nav className="p-6 space-y-2">
-          {menuItems.map((item) => {
-            const Icon = item.icon
-            const isActive = pathname === item.href
-            
-            return (
-              <button
-                key={item.href}
-                onClick={() => handleNavigation(item.href)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all ${
-                  isActive 
-                    ? 'bg-primary text-white shadow-lg' 
-                    : 'text-foreground hover:bg-muted/50'
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                {item.label}
-              </button>
-            )
-          })}
-
-          {/* Theme Toggle */}
-          <button
-            onClick={toggleTheme}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-foreground hover:bg-muted/50 mt-6"
-          >
-            {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-          </button>
-        </nav>
       </div>
 
       {/* Overlay */}
