@@ -6,7 +6,6 @@ import {
   Menu as MenuIcon,
   X as CloseIcon,
   Settings,
-  User,
   Database,
   Send,
   Moon,
@@ -20,7 +19,6 @@ import { ProfilePictureUpload } from '@/components/ui/profile-picture-upload'
 const menuItems = [
   { icon: Home, label: 'Home', href: '/dashboard' },
   { icon: Settings, label: 'Settings', href: '/settings' },
-  { icon: User, label: 'Profile Settings', href: '/profile' },
   { icon: Database, label: 'Dataset Collection', href: '/datasets' },
   { icon: Send, label: 'Requests', href: '/requests' },
 ]
@@ -172,19 +170,10 @@ export const Sidebar = forwardRef<{ toggleSidebar: () => void }, SidebarProps>(
               <div className="flex gap-3">
                 <button
                   onClick={() => {
-                    router.push('/profile')
-                    closeSidebar()
-                  }}
-                  className="flex-1 text-sm px-3 py-2 rounded-lg bg-transparent hover:bg-card/50 transition"
-                >
-                  View Profile
-                </button>
-                <button
-                  onClick={() => {
                     router.push('/create-poll')
                     closeSidebar()
                   }}
-                  className="flex-1 text-sm px-3 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-95 transition"
+                  className="w-full text-sm px-3 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-95 transition"
                 >
                   Create
                 </button>
