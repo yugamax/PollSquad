@@ -54,7 +54,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           onClick={handleProfileClick}
         >
           <div className="w-[52px] h-[52px] bg-card/90 backdrop-blur-xl rounded-xl border border-border/20 shadow-lg p-1 hover:shadow-xl transition-all hover:scale-105">
-            <ProfilePictureUpload showCamera={false} size="m" />
+            <ProfilePictureUpload showCamera={false} size="sm" />
           </div>
         </div>
       )}

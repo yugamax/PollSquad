@@ -1,10 +1,17 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { getVisiblePolls } from '@/lib/poll-service'
-import type { Poll } from '@/lib/poll-service'
 import { motion } from 'framer-motion'
 import { Clock, Users, TrendingUp } from 'lucide-react'
+
+interface Poll {
+  id: string
+  title: string
+  options: string[]
+  createdAt: Date
+  boostedUntil?: Date
+  votes: Record<string, number>
+}
 
 interface PollFeedProps {
   onRefresh?: () => void
@@ -14,47 +21,18 @@ interface PollFeedProps {
 export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) {
   const [polls, setPolls] = useState<Poll[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    loadPolls()
+    // Mock data for now
+    setPolls([])
+    setLoading(false)
   }, [])
-
-  const loadPolls = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const fetchedPolls = await getVisiblePolls(20)
-      setPolls(fetchedPolls)
-    } catch (err) {
-      console.error('Error loading polls:', err)
-      setError('Failed to load polls. Please try again.')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   if (loading) {
     return (
       <div className="text-center py-12">
         <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
         <p className="text-muted-foreground mt-4">Loading polls...</p>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="text-center py-12 card-elevated">
-        <div className="text-danger mb-4">⚠️</div>
-        <h3 className="text-lg font-semibold text-foreground mb-2">Error Loading Polls</h3>
-        <p className="text-muted-foreground mb-4">{error}</p>
-        <button 
-          onClick={loadPolls}
-          className="btn-primary"
-        >
-          Try Again
-        </button>
       </div>
     )
   }
@@ -78,7 +56,7 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
           {showRandomPolls ? 'Community Polls' : 'Latest Polls'}
         </h2>
         <button 
-          onClick={loadPolls}
+          onClick={onRefresh}
           className="text-primary hover:underline"
         >
           Refresh
@@ -94,17 +72,9 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
             transition={{ delay: index * 0.1 }}
             className="card-elevated p-6 hover:shadow-lg transition-all cursor-pointer"
           >
-            <div className="flex items-start justify-between mb-4">
-              <h3 className="font-semibold text-foreground text-lg leading-tight">
-                {poll.title}
-              </h3>
-              {poll.boostedUntil && poll.boostedUntil > new Date() && (
-                <div className="flex items-center gap-1 text-warning text-sm">
-                  <TrendingUp className="w-4 h-4" />
-                  <span>Boosted</span>
-                </div>
-              )}
-            </div>
+            <h3 className="font-semibold text-foreground text-lg mb-4">
+              {poll.title}
+            </h3>
 
             <div className="space-y-2 mb-4">
               {poll.options.map((option, optionIndex) => (
