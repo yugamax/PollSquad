@@ -60,9 +60,15 @@ export function ProfilePictureUpload({ showCamera = true, size = 'md' }: Profile
   }
 
   const cameraSizes = {
-    sm: 'w-2 h-2',
-    md: 'w-3 h-3',
-    lg: 'w-4 h-4'
+    sm: 'w-3 h-3',
+    md: 'w-4 h-4',
+    lg: 'w-5 h-5'
+  }
+
+  const cameraButtonSizes = {
+    sm: 'p-1',
+    md: 'p-1.5',
+    lg: 'p-2'
   }
 
   return (
@@ -84,7 +90,7 @@ export function ProfilePictureUpload({ showCamera = true, size = 'md' }: Profile
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="absolute -bottom-1 -right-1 p-1.5 bg-primary text-white rounded-full shadow-md hover:shadow-lg transition-all disabled:opacity-50 hover:-translate-y-0.5"
+            className={`absolute -bottom-0.5 -right-0.5 sm:-bottom-1 sm:-right-1 ${cameraButtonSizes[size]} bg-primary text-white rounded-full shadow-md hover:shadow-lg transition-all disabled:opacity-50 hover:-translate-y-0.5 touch-manipulation`}
           >
             <Camera className={cameraSizes[size]} />
           </button>

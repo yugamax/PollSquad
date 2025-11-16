@@ -89,7 +89,7 @@ export default function ProfilePage() {
             
             <div className="flex-1">
               <div className="mb-6">
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">
+                <h1 className="text-3xl font-bold text-primary mb-2">
                   Profile Settings
                 </h1>
                 <p className="text-muted-foreground">

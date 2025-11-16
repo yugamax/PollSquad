@@ -81,7 +81,7 @@ export default function RequestsPage() {
     <DashboardLayout>
       <div className="max-w-6xl mx-auto">
         <div className="mb-6 sm:mb-8 mt-2 sm:mt-4">
-          <h1 className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2 sm:mb-3 text-center sm:text-left">
+          <h1 className="text-2xl sm:text-4xl font-bold text-primary mb-2 sm:mb-3 text-center sm:text-left">
             Requests Management
           </h1>
           <p className="text-muted-foreground text-base sm:text-lg text-center sm:text-left">

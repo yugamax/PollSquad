@@ -21,10 +21,8 @@ export default function DashboardPage() {
         className="mb-8 sm:mb-12 text-center"
       >
         <div className="card-elevated p-4 sm:p-8 mb-6 sm:mb-8">
-          <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4">
-            <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
-              Discover Polls
-            </span>
+          <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4 text-primary">
+            Discover Polls
           </h2>
           <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto px-4">
             Vote on interesting polls from the community and earn points
