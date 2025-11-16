@@ -10,7 +10,8 @@ import {
   Send,
   Moon,
   Sun,
-  Home
+  Home,
+  LogOut
 } from 'lucide-react'
 import { useTheme } from '@/lib/theme-context'
 import { useAuth } from '@/lib/auth-context'
@@ -34,7 +35,28 @@ export const Sidebar = forwardRef<{ toggleSidebar: () => void }, SidebarProps>(
     const router = useRouter()
     const pathname = usePathname()
     const { theme, toggleTheme } = useTheme()
-    const { user } = useAuth()
+    const { user, signOut } = useAuth()
+
+    const handleSignOut = async () => {
+      try {
+        if (signOut) {
+          await signOut()
+        } else {
+          // Fallback: clear localStorage and redirect
+          localStorage.clear()
+          sessionStorage.clear()
+        }
+        router.push('/login')
+        closeSidebar()
+      } catch (error) {
+        console.error('Sign out error:', error)
+        // Fallback on error
+        localStorage.clear()
+        sessionStorage.clear()
+        router.push('/login')
+        closeSidebar()
+      }
+    }
 
     const toggleSidebar = () => {
       const next = !isOpen
@@ -169,13 +191,11 @@ export const Sidebar = forwardRef<{ toggleSidebar: () => void }, SidebarProps>(
             <div className="mt-auto p-4 sm:p-6 border-t border-border/30">
               <div className="flex gap-3">
                 <button
-                  onClick={() => {
-                    router.push('/create-poll')
-                    closeSidebar()
-                  }}
-                  className="w-full text-sm px-3 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-95 transition"
+                  onClick={handleSignOut}
+                  className="w-full flex items-center justify-center gap-2 text-sm px-3 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition"
                 >
-                  Create
+                  <LogOut className="w-4 h-4" />
+                  Sign Out
                 </button>
               </div>
             </div>
