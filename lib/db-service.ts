@@ -322,10 +322,12 @@ export async function getFeedPolls() {
             createdAt: data.createdAt?.toDate?.() || new Date(),
             boostedUntil: data.boostedUntil?.toDate?.(),
             expiresAt: data.expiresAt?.toDate?.(),
-            visible: true
+            visible: true,
+            boosted: data.boosted || false,
+            boostHours: data.boostHours || 0
           }
           polls.push(poll)
-          console.log('✅ Added poll to results:', poll.title)
+          console.log('✅ Added poll to results:', poll.title, poll.boosted ? '(BOOSTED)' : '')
         } else {
           console.log('❌ Skipped poll (invalid structure):', doc.id)
         }
@@ -334,10 +336,21 @@ export async function getFeedPolls() {
       }
     })
 
-    // Sort by date (newest first)
-    polls.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    // Sort by boost status first, then by date (boosted polls at top)
+    polls.sort((a, b) => {
+      // Check if polls are currently boosted
+      const now = new Date()
+      const aIsBoosted = a.boostedUntil && a.boostedUntil > now
+      const bIsBoosted = b.boostedUntil && b.boostedUntil > now
+      
+      if (aIsBoosted && !bIsBoosted) return -1
+      if (!aIsBoosted && bIsBoosted) return 1
+      
+      // If both are boosted or both are not boosted, sort by creation date
+      return b.createdAt.getTime() - a.createdAt.getTime()
+    })
     
-    console.log(`🎯 Final result: ${polls.length} valid polls`)
+    console.log(`🎯 Final result: ${polls.length} valid polls (${polls.filter(p => p.boostedUntil && p.boostedUntil > new Date()).length} boosted)`)
     return polls
     
   } catch (error) {

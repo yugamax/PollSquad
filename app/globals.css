@@ -351,3 +351,38 @@
   align-items: center;
   justify-content: center;
 }
+
+/* Boost Poll Golden Glow Animation */
+@keyframes boostGlow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(251, 191, 36, 0.3), 0 0 40px rgba(251, 191, 36, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(251, 191, 36, 0.5), 0 0 60px rgba(251, 191, 36, 0.2);
+  }
+}
+
+.boost-glow {
+  animation: boostGlow 3s ease-in-out infinite;
+}
+
+/* Boost shimmer effect */
+@keyframes boostShimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.boost-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 215, 0, 0.2),
+    transparent
+  );
+  background-size: 200% 100%;
+  animation: boostShimmer 3s linear infinite;
+}

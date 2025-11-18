@@ -7,6 +7,7 @@ import { getFeedPolls, submitVote, getUserVotesForPoll } from '../../lib/db-serv
 import { useAuth } from '../../lib/auth-context'
 import { awardPoints, calculatePoints, awardPollCompletionPoints } from '../../lib/points-service'
 import { hasUserCompletedPoll, hasReceivedPollCompletionPoints, hasUserVotedOnPoll } from '../../lib/db-service'
+import { BoostModal } from './boost-modal'
 
 // Match the actual Poll interface from db-service
 interface Poll {
@@ -15,6 +16,7 @@ interface Poll {
   title: string
   ownerName?: string
   ownerUid: string
+  ownerImage?: string
   questions?: Array<{
     id: string
     question: string
@@ -29,6 +31,9 @@ interface Poll {
   totalVotes?: number
   visible?: boolean
   tags?: string[]
+  boosted?: boolean
+  boostedUntil?: Date | { seconds: number }
+  boostHours?: number
 }
 
 interface PollFeedProps {
@@ -47,6 +52,10 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
   const [selectedPoll, setSelectedPoll] = useState<Poll | null>(null)
   const [votingModal, setVotingModal] = useState(false)
   const [finalSubmitLoading, setFinalSubmitLoading] = useState<Record<string, boolean>>({})
+  const [boostModal, setBoostModal] = useState<{ isOpen: boolean; pollId: string | null }>({
+    isOpen: false,
+    pollId: null
+  })
   const loadingRef = useRef(false) // Prevent multiple simultaneous loads
 
   // Don't load polls if user is not authenticated
@@ -392,6 +401,38 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
     }
   }, [])
 
+  // Helper function to calculate remaining boost time
+  const getBoostTimeRemaining = (boostedUntil: Date) => {
+    const now = new Date()
+    const timeLeft = boostedUntil.getTime() - now.getTime()
+    
+    if (timeLeft <= 0) return null
+    
+    const hours = Math.floor(timeLeft / (1000 * 60 * 60))
+    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60))
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`
+    } else {
+      return `${minutes}m`
+    }
+  }
+
+  const handleBoostClick = (e: React.MouseEvent, pollId: string) => {
+    e.stopPropagation() // Prevent opening the voting modal
+    setBoostModal({ isOpen: true, pollId })
+  }
+
+  const handleBoostSuccess = () => {
+    setBoostModal({ isOpen: false, pollId: null })
+    loadPolls()
+    onRefresh?.()
+  }
+
+  const handleBoostClose = () => {
+    setBoostModal({ isOpen: false, pollId: null })
+  }
+
   return (
     <>
       <div className="space-y-6">
@@ -402,25 +443,25 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
               animate={{ opacity: 1, y: 0 }}
               className="relative"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-2xl blur-xl"></div>
-              <div className="relative bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/30 rounded-2xl px-6 py-3 backdrop-blur-sm">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600/30 to-purple-600/30 rounded-2xl blur-xl"></div>
+              <div className="relative bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-600/40 rounded-2xl px-6 py-3 backdrop-blur-sm">
                 <div className="flex items-center gap-3">
                   <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
                   >
-                    <Globe className="w-6 h-6 text-blue-400" />
+                    <Globe className="w-6 h-6 text-blue-200" />
                   </motion.div>
-                  <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 bg-clip-text text-transparent">
+                  <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-200 via-purple-200 to-blue-200 bg-clip-text text-transparent">
                     Community Polls
                   </h2>
                   <motion.div
                     animate={{ scale: [1, 1.2, 1] }}
                     transition={{ duration: 2, repeat: Infinity }}
-                    className="w-2 h-2 bg-blue-400 rounded-full"
+                    className="w-2 h-2 bg-blue-200 rounded-full"
                   />
                 </div>
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full animate-pulse"></div>
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-blue-200 to-purple-200 rounded-full animate-pulse"></div>
               </div>
             </motion.div>
           ) : (
@@ -462,6 +503,12 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
             const createdAt = poll.createdAt instanceof Date ? poll.createdAt : 
                             poll.createdAt?.seconds ? new Date(poll.createdAt.seconds * 1000) : new Date()
             const hasVotedAny = pollQuestions.some(q => userVotes[pollId]?.[q.id])
+            
+            // Check if poll is boosted and still active
+            const boostedUntil = poll.boostedUntil instanceof Date ? poll.boostedUntil :
+                               poll.boostedUntil?.seconds ? new Date(poll.boostedUntil.seconds * 1000) : null
+            const isBoosted = boostedUntil && boostedUntil > new Date()
+            const boostTimeLeft = isBoosted ? getBoostTimeRemaining(boostedUntil) : null
 
             return (
               <motion.div
@@ -469,14 +516,35 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className="bg-card border border-border rounded-lg hover:shadow-md transition-all cursor-pointer group"
+                className={`relative border rounded-lg hover:shadow-md transition-all cursor-pointer group ${
+                  isBoosted 
+                    ? 'bg-gradient-to-r from-yellow-50/50 to-orange-50/50 border-yellow-300/50 shadow-lg' 
+                    : 'bg-card border-border'
+                }`}
                 onClick={() => user ? openVotingModal(poll) : null}
+                style={isBoosted ? {
+                  boxShadow: '0 0 20px rgba(251, 191, 36, 0.3), 0 0 40px rgba(251, 191, 36, 0.1)',
+                  animation: 'pulse 3s ease-in-out infinite'
+                } : {}}
               >
+                {/* Boost Indicator */}
+                {isBoosted && (
+                  <div className="absolute -top-2 -right-2 z-10">
+                    <div className="bg-gradient-to-r from-yellow-400 to-orange-400 text-black px-3 py-1 rounded-full text-xs font-bold shadow-lg flex items-center gap-1">
+                      <span>🚀</span>
+                      <span>BOOSTED</span>
+                      {boostTimeLeft && <span>• {boostTimeLeft}</span>}
+                    </div>
+                  </div>
+                )}
+
                 <div className="p-3 sm:p-4">
                   <div className="flex items-center gap-3 sm:gap-4">
                     {/* User Profile - Responsive */}
                     <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden flex-shrink-0 bg-primary/10">
+                      <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden flex-shrink-0 ${
+                        isBoosted ? 'ring-2 ring-yellow-400/50' : 'bg-primary/10'
+                      }`}>
                         {poll.ownerImage ? (
                           <img 
                             src={poll.ownerImage} 
@@ -490,9 +558,13 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
                           />
                         ) : null}
                         <div 
-                          className={`w-full h-full flex items-center justify-center ${poll.ownerImage ? 'hidden' : 'flex'}`}
+                          className={`w-full h-full flex items-center justify-center ${poll.ownerImage ? 'hidden' : 'flex'} ${
+                            isBoosted ? 'bg-yellow-100' : 'bg-primary/10'
+                          }`}
                         >
-                          <span className="text-primary font-bold text-xs sm:text-sm">
+                          <span className={`font-bold text-xs sm:text-sm ${
+                            isBoosted ? 'text-yellow-700' : 'text-primary'
+                          }`}>
                             {pollOwner.charAt(0).toUpperCase()}
                           </span>
                         </div>
@@ -500,7 +572,9 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
                       
                       {/* User Info - Hidden on mobile to save space */}
                       <div className="hidden sm:block min-w-0">
-                        <div className="font-medium text-sm text-foreground truncate">
+                        <div className={`font-medium text-sm truncate ${
+                          isBoosted ? 'text-yellow-800' : 'text-foreground'
+                        }`}>
                           {pollOwner}
                         </div>
                         <div className="text-xs text-muted-foreground">
@@ -511,7 +585,9 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
 
                     {/* Poll Title and Stats - Responsive */}
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-foreground text-sm sm:text-base truncate mb-1">
+                      <h3 className={`font-semibold text-sm sm:text-base truncate mb-1 ${
+                        isBoosted ? 'text-yellow-900' : 'text-foreground'
+                      }`}>
                         {pollTitle}
                       </h3>
                       <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
@@ -535,6 +611,12 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
                         <span className="sm:hidden text-xs">
                           {createdAt.toLocaleDateString('en', { month: 'short', day: 'numeric' })}
                         </span>
+                        {/* Boost timer on mobile */}
+                        {isBoosted && boostTimeLeft && (
+                          <span className="text-xs bg-yellow-200 text-yellow-800 px-2 py-0.5 rounded-full font-bold">
+                            🚀 {boostTimeLeft}
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -542,13 +624,31 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
                     <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                       {user ? (
                         <>
+                          {/* Boost button for poll owners - only show if NOT already boosted */}
+                          {user.uid === poll.ownerUid && !isBoosted && (
+                            <button
+                              onClick={(e) => handleBoostClick(e, pollId)}
+                              className="px-2 py-1 rounded-full text-xs font-bold transition-all hover:scale-105 bg-warning/20 text-warning border border-warning/30 hover:bg-warning/30"
+                              title="Boost this poll"
+                            >
+                              <span className="flex items-center gap-1">
+                                <span>🚀</span>
+                                <span className="hidden sm:inline">Boost</span>
+                              </span>
+                            </button>
+                          )}
+                          
                           {hasVotedAny && (
                             <div className="bg-success/20 text-success px-2 py-1 rounded-full font-medium text-xs">
                               <span className="hidden sm:inline">✓ Voted</span>
                               <span className="sm:hidden">✓</span>
                             </div>
                           )}
-                          <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                          <ChevronRight className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors ${
+                            isBoosted 
+                              ? 'text-yellow-600 group-hover:text-yellow-700' 
+                              : 'text-muted-foreground group-hover:text-primary'
+                          }`} />
                         </>
                       ) : (
                         <div className="flex items-center gap-1 sm:gap-2 text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded-full">
@@ -843,6 +943,14 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
           </div>
         )}
       </AnimatePresence>
+
+      {/* Boost Modal */}
+      <BoostModal
+        isOpen={boostModal.isOpen}
+        pollId={boostModal.pollId || ''}
+        onClose={handleBoostClose}
+        onSuccess={handleBoostSuccess}
+      />
     </>
   )
 }

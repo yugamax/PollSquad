@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth-context'
 import { updatePoll, getUserData } from '@/lib/db-service'
 import { motion, AnimatePresence } from 'framer-motion'
+import { updateDoc, doc, increment, serverTimestamp } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
 import { Timestamp } from 'firebase/firestore'
 
 interface BoostModalProps {
@@ -14,9 +16,9 @@ interface BoostModalProps {
 }
 
 const BOOST_DURATIONS = [
-  { hours: 6, cost: 60 }, // UPDATED: Changed from 50 to 60
-  { hours: 24, cost: 120 }, // UPDATED: Changed from 100 to 120  
-  { hours: 72, cost: 240 } // UPDATED: Changed from 200 to 240
+  { hours: 6, cost: 60 },
+  { hours: 24, cost: 120 },
+  { hours: 72, cost: 240 }
 ]
 
 export function BoostModal({ isOpen, pollId, onClose, onSuccess }: BoostModalProps) {
@@ -43,10 +45,12 @@ export function BoostModal({ isOpen, pollId, onClose, onSuccess }: BoostModalPro
 
       // Update poll boost time
       await updatePoll(pollId, {
-        boostedUntil: Timestamp.fromDate(boostUntil)
+        boostedUntil: Timestamp.fromDate(boostUntil),
+        boosted: true,
+        boostHours: selectedDuration.hours
       })
 
-      // FIXED: Deduct points from user using proper user update
+      // FIXED: Deduct points from user using proper Firestore operations
       await updateDoc(doc(db, 'users', user.uid), {
         points: increment(-selectedDuration.cost), // Subtract points
         lastUpdated: serverTimestamp()
@@ -55,10 +59,14 @@ export function BoostModal({ isOpen, pollId, onClose, onSuccess }: BoostModalPro
       // Refresh user data to update context
       await refreshUserData()
 
+      // Show success message
+      alert(`🚀 Poll boosted for ${selectedDuration.hours} hours! ${selectedDuration.cost} points deducted.`)
+
       onSuccess()
       onClose()
     } catch (error) {
       console.error('Error boosting poll:', error)
+      alert('Failed to boost poll. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -80,7 +88,7 @@ export function BoostModal({ isOpen, pollId, onClose, onSuccess }: BoostModalPro
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="bg-card rounded-2xl p-6 w-full max-w-md border border-border shadow-2xl"
+            className="bg-card rounded-2xl p-6 w-full max-w-md border border-border shadow-2xl relative z-50"
           >
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-foreground">🚀 Boost Poll</h2>
@@ -99,9 +107,9 @@ export function BoostModal({ isOpen, pollId, onClose, onSuccess }: BoostModalPro
                 <button
                   key={duration.hours}
                   onClick={() => setSelectedDuration(duration)}
-                  className={`w-full p-4 rounded-2xl border-2 transition-all flex items-center justify-between font-bold comic-shadow ${
+                  className={`w-full p-4 rounded-2xl border-2 transition-all flex items-center justify-between font-bold ${
                     selectedDuration.hours === duration.hours
-                      ? 'bg-warning/20 border-warning'
+                      ? 'bg-warning/20 border-warning shadow-lg'
                       : 'border-border hover:border-warning'
                   }`}
                 >
@@ -112,7 +120,7 @@ export function BoostModal({ isOpen, pollId, onClose, onSuccess }: BoostModalPro
                       {duration.hours === 72 && '🗓️ 3 Days'}
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      Most popular choice
+                      {duration.hours === 24 ? 'Most popular choice' : 'Great visibility'}
                     </div>
                   </div>
                   <div className="text-xl font-black text-primary">
@@ -130,15 +138,21 @@ export function BoostModal({ isOpen, pollId, onClose, onSuccess }: BoostModalPro
                   {userPoints} pts
                 </span>
               </div>
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center mb-2">
                 <span className="font-bold">Boost Cost</span>
-                <span className="text-primary font-black">{selectedDuration.cost} pts</span>
+                <span className="text-primary font-black">-{selectedDuration.cost} pts</span>
+              </div>
+              <div className="border-t border-primary/20 pt-2 flex justify-between items-center">
+                <span className="font-bold">After Boost</span>
+                <span className={`font-black ${userPoints >= selectedDuration.cost ? 'text-success' : 'text-danger'}`}>
+                  {userPoints - selectedDuration.cost} pts
+                </span>
               </div>
             </div>
 
             {!canAfford && (
               <div className="bg-danger/10 border border-danger/30 rounded-2xl p-3 mb-6 text-danger text-sm font-bold">
-                You need {selectedDuration.cost - userPoints} more points to boost
+                ❌ You need {selectedDuration.cost - userPoints} more points to boost this poll
               </div>
             )}
 
@@ -153,9 +167,16 @@ export function BoostModal({ isOpen, pollId, onClose, onSuccess }: BoostModalPro
               <button
                 onClick={handleBoost}
                 disabled={loading || !canAfford}
-                className="flex-1 px-4 py-3 bg-warning text-black rounded-2xl font-bold comic-shadow hover:comic-shadow-hover transition-all disabled:opacity-50"
+                className="flex-1 px-4 py-3 bg-warning text-black rounded-2xl font-bold transition-all disabled:opacity-50 hover:bg-warning/90"
               >
-                {loading ? 'Boosting...' : `Boost Poll (${selectedDuration.cost} pts)`}
+                {loading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                    Boosting...
+                  </div>
+                ) : (
+                  `🚀 Boost for ${selectedDuration.cost} pts`
+                )}
               </button>
             </div>
           </motion.div>

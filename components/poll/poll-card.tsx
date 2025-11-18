@@ -473,12 +473,23 @@ export function PollCard({
           <div className="flex gap-2">
             {isOwner ? (
               <>
-                <button
-                  onClick={() => setIsBoostModalOpen(true)}
-                  className="px-3 py-1 bg-warning text-black font-bold rounded-lg text-xs comic-shadow hover:comic-shadow-hover transition-all"
-                >
-                  🚀 Boost
-                </button>
+                {/* Only show boost button if NOT already boosted */}
+                {!boosted && (
+                  <button
+                    onClick={() => setIsBoostModalOpen(true)}
+                    className="px-3 py-1 bg-warning text-black font-bold rounded-lg text-xs comic-shadow hover:comic-shadow-hover transition-all"
+                  >
+                    🚀 Boost
+                  </button>
+                )}
+                
+                {/* Show boost status if already boosted */}
+                {boosted && (
+                  <div className="px-3 py-1 bg-yellow-200 text-yellow-800 font-bold rounded-lg text-xs border border-yellow-300">
+                    🚀 Boosted
+                  </div>
+                )}
+                
                 <ExportButton poll={{ pollId, title, ownerName: creator, questions, totalVotes } as any} />
               </>
             ) : (
