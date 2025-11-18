@@ -51,6 +51,19 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     setDisplayPoints(userPoints)
   }, [userPoints])
 
+  // NEW: Listen for sign-in modal events from poll feed
+  useEffect(() => {
+    const handleOpenSignInModal = () => {
+      setShowSignInModal(true)
+    }
+
+    window.addEventListener('openSignInModal', handleOpenSignInModal)
+    
+    return () => {
+      window.removeEventListener('openSignInModal', handleOpenSignInModal)
+    }
+  }, [])
+
   const handleProfileClick = () => {
     router.push('/profile')
   }

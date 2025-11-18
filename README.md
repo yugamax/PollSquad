@@ -50,46 +50,33 @@ A modern, playful polling platform where users earn points by answering polls, c
 - **User-Controlled Data** - Full control over what others can see
 
 ### Access Control Details
-- **Unauthenticated Access**: Login prompt only - no poll data visible
+- **Unauthenticated Access**: Sign-in prompt with features preview - no poll data visible
 - **Authenticated Access**: Full poll browsing, voting, creation, and management
 - **Data Security**: Complete protection of poll content and user data
 - **Privacy Protection**: User voting history and personal data secured
 
 ### Voting System Details
+- **Authentication Required**: Must sign in to view any polls
 - **Secure Voting**: Only authenticated users can vote on polls
 - **Vote Validation**: Prevents duplicate votes on same question
 - **Real-time Updates**: Vote counts update immediately without page refresh
 - **Visual Indicators**: Selected options, voted status, and progress bars
-- **Points Rewards**: Earn points for every vote cast
+- **Points Rewards**: Earn points for every poll completed
 
-## 🚨 **CURRENT ISSUE RESOLVED: Firestore Permission & Auto-Refresh Fix**
+## 🎯 **NEW FEATURE: Authentication-Required Poll Access**
 
-### **Problems Identified:**
-1. ✅ Dashboard shows data but auto-refreshes constantly
-2. ✅ Firestore permission denied errors
-3. ✅ "Missing or insufficient permissions" errors
+### **Updated Authentication Flow:**
+- ✅ **Login Prompt** - Unauthenticated users see compelling sign-in screen
+- ✅ **Features Preview** - Show what they can do after signing in
+- ✅ **No Poll Data** - Complete privacy protection until authentication
+- ✅ **Seamless Sign-In** - One-click Google authentication
+- ✅ **Immediate Access** - Full poll feed unlocked after sign-in
 
-### **Solutions Applied:**
-- ✅ Updated Firestore security rules to allow public read access to polls
-- ✅ Added request deduplication to prevent refresh loops
-- ✅ Enhanced error handling for permission issues
-- ✅ Added proper loading state management
-
-### **Required Action:**
-**Deploy the updated Firestore rules:**
-```bash
-firebase deploy --only firestore:rules
-```
-
-### **Expected Result After Rule Deployment:**
-You should now see these logs in console:
-```
-🚀 DASHBOARD COMPONENT LOADING - IMPORT PATHS FIXED!
-🏠 Dashboard component rendered with original design
-🎯 PollFeed: useEffect triggered, loading polls...
-🔄 PollFeed: loadPolls called
-🎉 PollFeed: getFeedPolls returned: X polls
-```
+### **Security Benefits:**
+- **Complete Privacy** - No poll content visible without authentication
+- **User Data Protection** - All voting history and preferences secured
+- **Engagement Incentive** - Clear value proposition encourages registration
+- **Clean UX** - Professional authentication flow with feature benefits
 
 ## Project Structure (Corrected)
 

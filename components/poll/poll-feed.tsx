@@ -498,192 +498,275 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
           </div>
         </div>
 
-        {/* Poll List */}
-        <div className="space-y-2 sm:space-y-3">
-          {polls.map((poll, index) => {
-            const pollId = poll.pollId || poll.id || `poll-${index}`
-            const pollTitle = poll.title || 'Untitled Poll'
-            const pollOwner = poll.ownerName || 'Anonymous'
-            const pollQuestions = poll.questions || []
-            const totalVotes = poll.totalVotes || 0
-            const createdAt = poll.createdAt instanceof Date ? poll.createdAt : 
-                            poll.createdAt?.seconds ? new Date(poll.createdAt.seconds * 1000) : new Date()
-            const hasVotedAny = pollQuestions.some(q => userVotes[pollId]?.[q.id])
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-8">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
+            <p className="mt-2 text-muted-foreground">Loading polls...</p>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <div className="text-center py-8">
+            <p className="text-destructive">{error}</p>
+            <button 
+              onClick={loadPolls}
+              className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        )}
+
+        {/* No User State - NEW: Show login prompt instead of hiding */}
+        {!user && !loading && (
+          <div className="text-center py-16 bg-card/50 rounded-2xl border border-border/30">
+            <div className="w-16 h-16 mx-auto mb-6 bg-primary/10 rounded-full flex items-center justify-center">
+              <Lock className="w-8 h-8 text-primary" />
+            </div>
+            <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-3">Sign In to View Polls</h3>
+            <p className="text-muted-foreground mb-6 max-w-md mx-auto text-sm sm:text-base">
+              Join our community to explore polls, share your opinions, and earn points for your participation.
+            </p>
             
-            // Check if poll is boosted and still active
-            const boostedUntil = poll.boostedUntil instanceof Date ? poll.boostedUntil :
-                               poll.boostedUntil?.seconds ? new Date(poll.boostedUntil.seconds * 1000) : null
-            const isBoosted = boostedUntil && boostedUntil > new Date()
-            const boostTimeLeft = isBoosted ? getBoostTimeRemaining(boostedUntil) : null
+            {/* Features Preview */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 max-w-2xl mx-auto">
+              <div className="bg-white/50 rounded-xl p-4 border border-border/20">
+                <div className="text-2xl mb-2">🗳️</div>
+                <div className="font-semibold text-sm">Vote on Polls</div>
+                <div className="text-xs text-muted-foreground mt-1">Share your opinions</div>
+              </div>
+              <div className="bg-white/50 rounded-xl p-4 border border-border/20">
+                <div className="text-2xl mb-2">⭐</div>
+                <div className="font-semibold text-sm">Earn Points</div>
+                <div className="text-xs text-muted-foreground mt-1">5 points per poll</div>
+              </div>
+              <div className="bg-white/50 rounded-xl p-4 border border-border/20">
+                <div className="text-2xl mb-2">🚀</div>
+                <div className="font-semibold text-sm">Boost Polls</div>
+                <div className="text-xs text-muted-foreground mt-1">Increase visibility</div>
+              </div>
+            </div>
 
-            return (
-              <motion.div
-                key={pollId}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className={`relative border rounded-lg hover:shadow-md transition-all cursor-pointer group ${
-                  isBoosted 
-                    ? 'bg-gradient-to-r from-yellow-50/50 to-orange-50/50 border-yellow-300/50 shadow-lg' 
-                    : 'bg-card border-border'
-                }`}
-                onClick={() => user ? openVotingModal(poll) : null}
-                style={isBoosted ? {
-                  boxShadow: '0 0 20px rgba(251, 191, 36, 0.3), 0 0 40px rgba(251, 191, 36, 0.1)',
-                  animation: 'pulse 3s ease-in-out infinite'
-                } : {}}
-              >
-                {/* Boost Indicator */}
-                {isBoosted && (
-                  <div className="absolute -top-2 -right-2 z-10">
-                    <div className="bg-gradient-to-r from-yellow-400 to-orange-400 text-black px-3 py-1 rounded-full text-xs font-bold shadow-lg flex items-center gap-1">
-                      <span>🚀</span>
-                      <span>BOOSTED</span>
-                      {boostTimeLeft && <span>• {boostTimeLeft}</span>}
-                    </div>
-                  </div>
-                )}
+            <button 
+              onClick={() => {
+                // Trigger sign-in modal if available, or redirect
+                const signInEvent = new CustomEvent('openSignInModal')
+                window.dispatchEvent(signInEvent)
+              }}
+              className="inline-flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-xl font-semibold hover:bg-primary/90 transition-all hover:scale-105 shadow-lg"
+            >
+              <LogIn className="w-5 h-5" />
+              <span>Sign In to Get Started</span>
+            </button>
+            
+            <div className="mt-4 text-xs text-muted-foreground">
+              🔒 Secure authentication with Google Sign-In
+            </div>
+          </div>
+        )}
 
-                <div className="p-3 sm:p-4">
-                  <div className="flex items-center gap-3 sm:gap-4">
-                    {/* User Profile - Responsive and Clickable */}
-                    <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-                      <div 
-                        className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all ${
-                          isBoosted ? 'ring-2 ring-yellow-400/50' : 'bg-primary/10'
-                        }`}
-                        onClick={(e) => handleProfileClick(e, poll.ownerUid)}
-                        title="View profile"
-                      >
-                        {poll.ownerImage ? (
-                          <img 
-                            src={poll.ownerImage} 
-                            alt={pollOwner}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              // Fallback to initials if image fails to load
-                              e.currentTarget.style.display = 'none'
-                              e.currentTarget.nextElementSibling.style.display = 'flex'
-                            }}
-                          />
-                        ) : null}
-                        <div 
-                          className={`w-full h-full flex items-center justify-center ${poll.ownerImage ? 'hidden' : 'flex'} ${
-                            isBoosted ? 'bg-yellow-100' : 'bg-primary/10'
-                          }`}
-                        >
-                          <span className={`font-bold text-xs sm:text-sm ${
-                            isBoosted ? 'text-yellow-700' : 'text-primary'
-                          }`}>
-                            {pollOwner.charAt(0).toUpperCase()}
-                          </span>
+        {/* Poll List - Only show when user is authenticated */}
+        {user && !loading && !error &&  (
+          <div className="space-y-2 sm:space-y-3">
+            {polls.length === 0 ? (
+              <div className="text-center py-12 bg-card/50 rounded-2xl border border-border/30">
+                <div className="w-12 h-12 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
+                  <Vote className="w-6 h-6 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground mb-2">No Polls Available</h3>
+                <p className="text-muted-foreground text-sm">
+                  There are no polls to display at the moment. Check back later!
+                </p>
+              </div>
+            ) : (
+              polls.map((poll, index) => {
+                const pollId = poll.pollId || poll.id || `poll-${index}`
+                const pollTitle = poll.title || 'Untitled Poll'
+                const pollOwner = poll.ownerName || 'Anonymous'
+                const pollQuestions = poll.questions || []
+                const totalVotes = poll.totalVotes || 0
+                const createdAt = poll.createdAt instanceof Date ? poll.createdAt : 
+                                poll.createdAt?.seconds ? new Date(poll.createdAt.seconds * 1000) : new Date()
+                const hasVotedAny = pollQuestions.some(q => userVotes[pollId]?.[q.id])
+                
+                // Check if poll is boosted and still active
+                const boostedUntil = poll.boostedUntil instanceof Date ? poll.boostedUntil :
+                                   poll.boostedUntil?.seconds ? new Date(poll.boostedUntil.seconds * 1000) : null
+                const isBoosted = boostedUntil && boostedUntil > new Date()
+                const boostTimeLeft = isBoosted ? getBoostTimeRemaining(boostedUntil) : null
+
+                return (
+                  <motion.div
+                    key={pollId}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className={`relative border rounded-lg hover:shadow-md transition-all cursor-pointer group ${
+                      isBoosted 
+                        ? 'bg-gradient-to-r from-yellow-50/50 to-orange-50/50 border-yellow-300/50 shadow-lg' 
+                        : 'bg-card border-border'
+                    }`}
+                    onClick={() => user ? openVotingModal(poll) : null}
+                    style={isBoosted ? {
+                      boxShadow: '0 0 20px rgba(251, 191, 36, 0.3), 0 0 40px rgba(251, 191, 36, 0.1)',
+                      animation: 'pulse 3s ease-in-out infinite'
+                    } : {}}
+                  >
+                    {/* Boost Indicator */}
+                    {isBoosted && (
+                      <div className="absolute -top-2 -right-2 z-10">
+                        <div className="bg-gradient-to-r from-yellow-400 to-orange-400 text-black px-3 py-1 rounded-full text-xs font-bold shadow-lg flex items-center gap-1">
+                          <span>🚀</span>
+                          <span>BOOSTED</span>
+                          {boostTimeLeft && <span>• {boostTimeLeft}</span>}
                         </div>
                       </div>
-                      
-                      {/* User Info - Hidden on mobile to save space */}
-                      <div className="hidden sm:block min-w-0">
-                        <div 
-                          className={`font-medium text-sm truncate cursor-pointer hover:underline ${
-                            isBoosted ? 'text-yellow-800' : 'text-foreground'
-                          }`}
-                          onClick={(e) => handleProfileClick(e, poll.ownerUid)}
-                        >
-                          {pollOwner}
-                        </div>
-                        {/* College name if available */}
-                        {poll.ownerCollege && (
-                          <div className="text-xs text-muted-foreground truncate flex items-center gap-1">
-                            <GraduationCap className="w-3 h-3" />
-                            {poll.ownerCollege}
-                          </div>
-                        )}
-                        <div className="text-xs text-muted-foreground">
-                          {createdAt.toLocaleDateString()}
-                        </div>
-                      </div>
-                    </div>
+                    )}
 
-                    {/* Poll Title and Stats - Responsive */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className={`font-semibold text-sm sm:text-base truncate mb-1 ${
-                        isBoosted ? 'text-yellow-900' : 'text-foreground'
-                      }`}>
-                        {pollTitle}
-                      </h3>
-                      <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Users className="w-3 h-3" />
-                          <span className="hidden xs:inline">{totalVotes} votes</span>
-                          <span className="xs:hidden">{totalVotes}</span>
-                        </span>
-                        <span className="hidden sm:inline">
-                          {pollQuestions.length} question{pollQuestions.length !== 1 ? 's' : ''}
-                        </span>
-                        <span className="sm:hidden">
-                          {pollQuestions.length}Q
-                        </span>
-                        {poll.tags && poll.tags.length > 0 && (
-                          <span className="text-xs bg-accent/20 text-accent px-1.5 py-0.5 sm:px-2 sm:py-0.5 rounded-full hidden sm:inline">
-                            #{poll.tags[0]}
-                          </span>
-                        )}
-                        {/* Show date on mobile since it's hidden in user info */}
-                        <span className="sm:hidden text-xs">
-                          {createdAt.toLocaleDateString('en', { month: 'short', day: 'numeric' })}
-                        </span>
-                        {/* Boost timer on mobile */}
-                        {isBoosted && boostTimeLeft && (
-                          <span className="text-xs bg-yellow-200 text-yellow-800 px-2 py-0.5 rounded-full font-bold">
-                            🚀 {boostTimeLeft}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Right Side - Status and Action */}
-                    <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-                      {user ? (
-                        <>
-                          {/* Boost button for poll owners - only show if NOT already boosted */}
-                          {user.uid === poll.ownerUid && !isBoosted && (
-                            <button
-                              onClick={(e) => handleBoostClick(e, pollId)}
-                              className="px-2 py-1 rounded-full text-xs font-bold transition-all hover:scale-105 bg-warning/20 text-warning border border-warning/30 hover:bg-warning/30"
-                              title="Boost this poll"
+                    <div className="p-3 sm:p-4">
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        {/* User Profile - Responsive and Clickable */}
+                        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                          <div 
+                            className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all ${
+                              isBoosted ? 'ring-2 ring-yellow-400/50' : 'bg-primary/10'
+                            }`}
+                            onClick={(e) => handleProfileClick(e, poll.ownerUid)}
+                            title="View profile"
+                          >
+                            {poll.ownerImage ? (
+                              <img 
+                                src={poll.ownerImage} 
+                                alt={pollOwner}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  // Fallback to initials if image fails to load
+                                  e.currentTarget.style.display = 'none'
+                                  e.currentTarget.nextElementSibling.style.display = 'flex'
+                                }}
+                              />
+                            ) : null}
+                            <div 
+                              className={`w-full h-full flex items-center justify-center ${poll.ownerImage ? 'hidden' : 'flex'} ${
+                                isBoosted ? 'bg-yellow-100' : 'bg-primary/10'
+                              }`}
                             >
-                              <span className="flex items-center gap-1">
-                                <span>🚀</span>
-                                <span className="hidden sm:inline">Boost</span>
+                              <span className={`font-bold text-xs sm:text-sm ${
+                                isBoosted ? 'text-yellow-700' : 'text-primary'
+                              }`}>
+                                {pollOwner.charAt(0).toUpperCase()}
                               </span>
-                            </button>
-                          )}
+                            </div>
+                          </div>
                           
-                          {hasVotedAny && (
-                            <div className="bg-success/20 text-success px-2 py-1 rounded-full font-medium text-xs">
-                              <span className="hidden sm:inline">✓ Voted</span>
-                              <span className="sm:hidden">✓</span>
+                          {/* User Info - Hidden on mobile to save space */}
+                          <div className="hidden sm:block min-w-0">
+                            <div 
+                              className={`font-medium text-sm truncate cursor-pointer hover:underline ${
+                                isBoosted ? 'text-yellow-800' : 'text-foreground'
+                              }`}
+                              onClick={(e) => handleProfileClick(e, poll.ownerUid)}
+                            >
+                              {pollOwner}
+                            </div>
+                            {/* College name if available */}
+                            {poll.ownerCollege && (
+                              <div className="text-xs text-muted-foreground truncate flex items-center gap-1">
+                                <GraduationCap className="w-3 h-3" />
+                                {poll.ownerCollege}
+                              </div>
+                            )}
+                            <div className="text-xs text-muted-foreground">
+                              {createdAt.toLocaleDateString()}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Poll Title and Stats - Responsive */}
+                        <div className="flex-1 min-w-0">
+                          <h3 className={`font-semibold text-sm sm:text-base truncate mb-1 ${
+                            isBoosted ? 'text-yellow-900' : 'text-foreground'
+                          }`}>
+                            {pollTitle}
+                          </h3>
+                          <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Users className="w-3 h-3" />
+                              <span className="hidden xs:inline">{totalVotes} votes</span>
+                              <span className="xs:hidden">{totalVotes}</span>
+                            </span>
+                            <span className="hidden sm:inline">
+                              {pollQuestions.length} question{pollQuestions.length !== 1 ? 's' : ''}
+                            </span>
+                            <span className="sm:hidden">
+                              {pollQuestions.length}Q
+                            </span>
+                            {poll.tags && poll.tags.length > 0 && (
+                              <span className="text-xs bg-accent/20 text-accent px-1.5 py-0.5 sm:px-2 sm:py-0.5 rounded-full hidden sm:inline">
+                                #{poll.tags[0]}
+                              </span>
+                            )}
+                            {/* Show date on mobile since it's hidden in user info */}
+                            <span className="sm:hidden text-xs">
+                              {createdAt.toLocaleDateString('en', { month: 'short', day: 'numeric' })}
+                            </span>
+                            {/* Boost timer on mobile */}
+                            {isBoosted && boostTimeLeft && (
+                              <span className="text-xs bg-yellow-200 text-yellow-800 px-2 py-0.5 rounded-full font-bold">
+                                🚀 {boostTimeLeft}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Right Side - Status and Action */}
+                        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                          {user ? (
+                            <>
+                              {/* Boost button for poll owners - only show if NOT already boosted */}
+                              {user.uid === poll.ownerUid && !isBoosted && (
+                                <button
+                                  onClick={(e) => handleBoostClick(e, pollId)}
+                                  className="px-2 py-1 rounded-full text-xs font-bold transition-all hover:scale-105 bg-warning/20 text-warning border border-warning/30 hover:bg-warning/30"
+                                  title="Boost this poll"
+                                >
+                                  <span className="flex items-center gap-1">
+                                    <span>🚀</span>
+                                    <span className="hidden sm:inline">Boost</span>
+                                  </span>
+                                </button>
+                              )}
+                              
+                              {hasVotedAny && (
+                                <div className="bg-success/20 text-success px-2 py-1 rounded-full font-medium text-xs">
+                                  <span className="hidden sm:inline">✓ Voted</span>
+                                  <span className="sm:hidden">✓</span>
+                                </div>
+                              )}
+                              <ChevronRight className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors ${
+                                isBoosted 
+                                  ? 'text-yellow-600 group-hover:text-yellow-700' 
+                                  : 'text-muted-foreground group-hover:text-primary'
+                              }`} />
+                            </>
+                          ) : (
+                            <div className="flex items-center gap-1 sm:gap-2 text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded-full">
+                              <Lock className="w-3 h-3" />
+                              <span className="hidden sm:inline">Sign in to vote</span>
+                              <span className="sm:hidden">Sign in</span>
                             </div>
                           )}
-                          <ChevronRight className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors ${
-                            isBoosted 
-                              ? 'text-yellow-600 group-hover:text-yellow-700' 
-                              : 'text-muted-foreground group-hover:text-primary'
-                          }`} />
-                        </>
-                      ) : (
-                        <div className="flex items-center gap-1 sm:gap-2 text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded-full">
-                          <Lock className="w-3 h-3" />
-                          <span className="hidden sm:inline">Sign in to vote</span>
-                          <span className="sm:hidden">Sign in</span>
                         </div>
-                      )}
+                      </div>
                     </div>
-                  </div>
-                </div>
-              </motion.div>
-            )
-          })}
-        </div>
+                  </motion.div>
+                )
+              })
+            )}
+          </div>
+        )}
       </div>
 
       {/* Voting Modal - Responsive */}
