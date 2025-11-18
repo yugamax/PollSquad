@@ -421,7 +421,7 @@ firebase deploy --only hosting
 ## Points System
 
 ### Points Allocation
-- **Starting Points**: 40 points for new accounts
+- **Starting Points**: 30 points for new accounts
 - **Poll Completion**: 5 points per fully completed poll (all questions answered)
 - **Consecutive Poll Bonus**: +10 additional points for every 5 consecutive poll completions
 - **Own Poll Voting**: Poll creators can vote on their own polls but receive no points
@@ -598,7 +598,7 @@ For issues or questions, please open an GitHub issue or contact support.
 - **No Question-Level Points**: Individual questions no longer give points
 
 ### **New Points System:**
-- **Starting Points** - All new accounts begin with 40 points automatically
+- **Starting Points** - All new accounts begin with 30 points automatically
 - **Poll Completion Rewards** - Earn 5 points only when you complete ALL questions in a poll
 - **No Per-Question Points** - Points are no longer awarded for individual questions
 - **Completion Tracking** - System tracks which polls you've fully completed to prevent double rewards

@@ -31,7 +31,7 @@ export async function createUserData(uid: string, user: Partial<User>) {
     displayName: user.displayName,
     email: user.email,
     photoURL: user.photoURL,
-    points: 40, // UPDATED: Changed from 25 to 40 points
+    points: 30, // UPDATED: Changed from 40 to 30 points
     completedPolls: [], // NEW: Track completed polls for points
     createdAt: serverTimestamp(),
     settings: {

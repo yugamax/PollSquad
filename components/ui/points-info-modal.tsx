@@ -87,12 +87,12 @@ export function PointsInfoModal({ isOpen, onClose, currentPoints }: PointsInfoMo
 
                     <div className="flex items-start gap-3 p-4 bg-primary/10 rounded-lg border border-primary/20">
                       <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center flex-shrink-0">
-                        <span className="text-primary font-bold text-sm">40</span>
+                        <span className="text-primary font-bold text-sm">30</span>
                       </div>
                       <div>
                         <h4 className="font-semibold text-primary">Starting Bonus</h4>
                         <p className="text-sm text-muted-foreground mt-1">
-                          New accounts automatically start with 40 points to get you started.
+                          New accounts automatically start with 30 points to get you started.
                         </p>
                       </div>
                     </div>

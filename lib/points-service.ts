@@ -3,7 +3,7 @@ import { db } from './firebase'
 import { getUserData } from './db-service' // ADD: Missing import
 
 export const POINTS_CONFIG = {
-  STARTING_POINTS: 40,
+  STARTING_POINTS: 30, // UPDATED: Changed from 40 to 30
   BASE_POLL_COMPLETION_POINTS: 5,
   BONUS_STREAK: 10, // Consecutive poll completion bonus
   BONUS_UNDERSAMPLED: 15, // Keep for backward compatibility but not displayed in UI

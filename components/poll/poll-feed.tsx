@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Clock, Users, TrendingUp, Vote, Lock, LogIn, ChevronRight, X, Star, RefreshCw } from 'lucide-react'
+import { Clock, Users, TrendingUp, Vote, Lock, LogIn, ChevronRight, X, Star, RefreshCw, Globe } from 'lucide-react'
 import { getFeedPolls, submitVote, getUserVotesForPoll } from '../../lib/db-service'
 import { useAuth } from '../../lib/auth-context'
 import { awardPoints, calculatePoints, awardPollCompletionPoints } from '../../lib/points-service'
@@ -396,15 +396,44 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
     <>
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <h2 className="text-xl sm:text-2xl font-bold text-foreground">
-            {showRandomPolls ? 'Community Polls' : 'Latest Polls'}
-          </h2>
+          {showRandomPolls ? (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="relative"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-2xl blur-xl"></div>
+              <div className="relative bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/30 rounded-2xl px-6 py-3 backdrop-blur-sm">
+                <div className="flex items-center gap-3">
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                  >
+                    <Globe className="w-6 h-6 text-blue-400" />
+                  </motion.div>
+                  <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 bg-clip-text text-transparent">
+                    Community Polls
+                  </h2>
+                  <motion.div
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="w-2 h-2 bg-blue-400 rounded-full"
+                  />
+                </div>
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full animate-pulse"></div>
+              </div>
+            </motion.div>
+          ) : (
+            <h2 className="text-xl sm:text-2xl font-bold text-foreground text-blue">
+              Latest Polls
+            </h2>
+          )}
           <div className="flex items-center gap-4">
             {user && (
               <div className="flex items-center gap-2 text-sm bg-warning/10 text-warning px-3 py-2 rounded-full border border-warning/20">
-                <Star className="w-4 h-4" />
-                <span className="font-medium">+5 points per poll completed</span>
-                <span className="text-xs opacity-75">({userPoints} total)</span>
+                <Star className="w-4 h-4 text-yellow-200" />
+                <span className="font-medium text-white">+5 points per poll completed</span>
+                <span className="text-xs opacity-90 text-yellow-200">({userPoints} total)</span>
               </div>
             )}
             
