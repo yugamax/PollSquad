@@ -1,12 +1,13 @@
 import { updateDoc, doc, increment, serverTimestamp, arrayUnion } from 'firebase/firestore'
 import { db } from './firebase'
+import { getUserData } from './db-service' // ADD: Missing import
 
 export const POINTS_CONFIG = {
-  STARTING_POINTS: 40, // UPDATED: Changed from 25 to 40 points for new accounts
+  STARTING_POINTS: 40,
   BASE_POLL_COMPLETION_POINTS: 5,
-  BONUS_STREAK: 10,
-  BONUS_UNDERSAMPLED: 15,
-  STREAK_THRESHOLD: 3,
+  BONUS_STREAK: 10, // Consecutive poll completion bonus
+  BONUS_UNDERSAMPLED: 15, // Keep for backward compatibility but not displayed in UI
+  STREAK_THRESHOLD: 5, // UPDATED: Changed from 3 to 5 consecutive poll completions
   UNDERSAMPLED_VOTES_THRESHOLD: 50
 }
 
@@ -15,7 +16,7 @@ export async function awardPollCompletionPoints(userUid: string, pollId: string,
   try {
     console.log(`🎯 Attempting to award points for poll completion: user ${userUid}, poll ${pollId}`)
     
-    // CRITICAL: Check if user already got points for this poll
+    // Get user data to check completion history
     const userData = await getUserData(userUid)
     if (!userData) {
       console.log('❌ User not found, cannot award points')
@@ -28,27 +29,30 @@ export async function awardPollCompletionPoints(userUid: string, pollId: string,
       return 0
     }
     
-    const points = POINTS_CONFIG.BASE_POLL_COMPLETION_POINTS
+    let finalPoints = POINTS_CONFIG.BASE_POLL_COMPLETION_POINTS
     
-    // Add undersampled bonus if poll has few votes
-    let finalPoints = points
-    if (totalVotes < POINTS_CONFIG.UNDERSAMPLED_VOTES_THRESHOLD) {
-      finalPoints += POINTS_CONFIG.BONUS_UNDERSAMPLED
+    // NEW: Check for consecutive poll completion streak
+    const recentCompletions = completedPolls.length
+    const consecutiveCompletions = recentCompletions + 1 // Including current poll
+    
+    if (consecutiveCompletions >= POINTS_CONFIG.STREAK_THRESHOLD && consecutiveCompletions % POINTS_CONFIG.STREAK_THRESHOLD === 0) {
+      finalPoints += POINTS_CONFIG.BONUS_STREAK
+      console.log(`🔥 Consecutive poll streak bonus! User completed ${consecutiveCompletions} polls consecutively, adding ${POINTS_CONFIG.BONUS_STREAK} bonus points`)
     }
     
     // Update user points and add to completed polls list ATOMICALLY
     await updateDoc(doc(db, 'users', userUid), {
       points: increment(finalPoints),
       lastUpdated: serverTimestamp(),
-      completedPolls: arrayUnion(pollId) // Track completed polls in user document
+      completedPolls: arrayUnion(pollId)
     })
     
     console.log(`🎁 Successfully awarded ${finalPoints} points to user ${userUid} for completing poll ${pollId}`)
     
-    // NEW: Trigger a custom event to notify components about points update
+    // Trigger a custom event to notify components about points update
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('userPointsUpdated', { 
-        detail: { userUid, pointsAwarded: finalPoints } 
+        detail: { userUid, pointsAwarded: finalPoints, hasStreak: finalPoints > POINTS_CONFIG.BASE_POLL_COMPLETION_POINTS } 
       }))
     }
     

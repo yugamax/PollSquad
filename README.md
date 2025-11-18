@@ -417,16 +417,16 @@ firebase deploy --only hosting
 ## Points System
 
 ### Points Allocation
-- **Starting Points**: 25 points for new accounts
+- **Starting Points**: 40 points for new accounts
 - **Poll Completion**: 5 points per fully completed poll (all questions answered)
-- **Undersampled Bonus**: +15 additional points for polls with < 50 total votes
+- **Consecutive Poll Bonus**: +10 additional points for every 5 consecutive poll completions
 - **One-Time Rewards**: Points awarded only once per poll, regardless of question count
-- **Boost Cost**: 50-200 points depending on boost duration
+- **Boost Cost**: 60-240 points depending on boost duration
 
 ### Boost Pricing
-- **6 Hours**: 50 points
-- **24 Hours**: 100 points
-- **72 Hours**: 200 points
+- **6 Hours**: 60 points
+- **24 Hours**: 120 points
+- **72 Hours**: 240 points
 
 ## API Endpoints
 
@@ -580,18 +580,18 @@ For issues or questions, please open an GitHub issue or contact support.
 - ✅ **Points System Updated** - New accounts start with 25 points, earn 5 points per completed poll
 
 ### **Points System Details:**
-- **New Account**: Start with 25 points
+- **New Account**: Start with 40 points
 - **Complete Poll**: +5 points (must answer ALL questions in one poll)
-- **Undersampled Poll Bonus**: +15 additional points (polls with <50 votes)
+- **Consecutive Poll Bonus**: +10 additional points for every 5 consecutive poll completions
 - **One-Time Reward**: Points awarded only once per poll completion
 - **No Question-Level Points**: Individual questions no longer give points
 
 ### **New Points System:**
-- **Starting Points** - All new accounts begin with 25 points automatically
+- **Starting Points** - All new accounts begin with 40 points automatically
 - **Poll Completion Rewards** - Earn 5 points only when you complete ALL questions in a poll
 - **No Per-Question Points** - Points are no longer awarded for individual questions
 - **Completion Tracking** - System tracks which polls you've fully completed to prevent double rewards
-- **Undersampled Bonus** - Additional 15 points for completing polls with fewer than 50 total votes
+- **Consecutive Bonus** - Additional 10 points for every 5 consecutive poll completions
 
 ### **Profile Settings Integration:**
 - **Sidebar Navigation** - Added "Profile Settings" link with user icon between Home and Settings

@@ -41,33 +41,41 @@ export const Sidebar = forwardRef<{ toggleSidebar: () => void }, SidebarProps>(
     const { theme, toggleTheme } = useTheme()
     const { user, signOut, userPoints, refreshUserData } = useAuth()
     const [displayPoints, setDisplayPoints] = useState(0)
-    const [showUserInfo, setShowUserInfo] = useState(false)
-    const [allUsers, setAllUsers] = useState<UserDataJSON[]>([])
-    const [loadingUsers, setLoadingUsers] = useState(false)
 
     // Force refresh from database when component mounts
     useEffect(() => {
       if (user) {
-        console.log('🔄 Sidebar: Force refreshing points from database')
+        console.log('🔄 Sidebar: Component mounted, forcing points refresh')
         refreshUserData()
       }
     }, [user?.uid, refreshUserData])
 
-    // Listen for points updates
+    // Listen for ALL points update events
     useEffect(() => {
       const handlePointsUpdate = () => {
         console.log('🔄 Sidebar: Points update event received, refreshing...')
         refreshUserData()
       }
 
+      const handleForceRefresh = (event) => {
+        console.log('🔄 Sidebar: Force refresh event received:', event.detail)
+        setDisplayPoints(event.detail?.points || 0)
+      }
+
       if (typeof window !== 'undefined') {
         window.addEventListener('userPointsUpdated', handlePointsUpdate)
-        return () => window.removeEventListener('userPointsUpdated', handlePointsUpdate)
+        window.addEventListener('forcePointsRefresh', handleForceRefresh)
+        
+        return () => {
+          window.removeEventListener('userPointsUpdated', handlePointsUpdate)
+          window.removeEventListener('forcePointsRefresh', handleForceRefresh)
+        }
       }
     }, [refreshUserData])
 
     // Update display points when context points change
     useEffect(() => {
+      console.log('📊 Sidebar: Context points changed to:', userPoints)
       setDisplayPoints(userPoints)
     }, [userPoints])
 
@@ -255,19 +263,6 @@ export const Sidebar = forwardRef<{ toggleSidebar: () => void }, SidebarProps>(
                 )}
                 <span className="font-medium">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
               </button>
-
-              {/* Admin Section - Check User Info */}
-              {user && (
-                <Link
-                  href="/admin/users"
-                  className="w-full flex items-center gap-3 sm:gap-4 px-4 py-3 sm:py-4 rounded-2xl transition-all group text-foreground hover:bg-primary/10 hover:text-primary"
-                >
-                  <span className="text-lg sm:text-xl">👥</span>
-                  <span className="font-bold text-sm sm:text-base">User Data Admin</span>
-                </Link>
-              )}
-
-              {/* ...existing code... */}
             </nav>
 
             {/* Footer actions (optional) */}

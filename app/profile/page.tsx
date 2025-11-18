@@ -9,6 +9,7 @@ import { Save, AlertCircle, X } from 'lucide-react'
 
 export default function ProfilePage() {
   const { user, userPoints, refreshUserData } = useAuth()
+  const [displayPoints, setDisplayPoints] = useState(0)
   const [profile, setProfile] = useState({
     displayName: user?.displayName || '',
     bio: '',
@@ -69,6 +70,14 @@ export default function ProfilePage() {
     loadUserStats()
   }, [user])
 
+  // Force refresh points when profile page loads
+  useEffect(() => {
+    if (user) {
+      console.log('🔄 Profile: Page loaded, forcing points refresh')
+      refreshUserData()
+    }
+  }, [user?.uid, refreshUserData])
+
   // Listen for points updates
   useEffect(() => {
     const handlePointsUpdate = () => {
@@ -76,9 +85,27 @@ export default function ProfilePage() {
       refreshUserData()
     }
 
-    window.addEventListener('userPointsUpdated', handlePointsUpdate)
-    return () => window.removeEventListener('userPointsUpdated', handlePointsUpdate)
+    const handleForceRefresh = (event) => {
+      console.log('🔄 Profile: Force refresh event received:', event.detail)
+      setDisplayPoints(event.detail?.points || 0)
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('userPointsUpdated', handlePointsUpdate)
+      window.addEventListener('forcePointsRefresh', handleForceRefresh)
+      
+      return () => {
+        window.removeEventListener('userPointsUpdated', handlePointsUpdate)
+        window.removeEventListener('forcePointsRefresh', handleForceRefresh)
+      }
+    }
   }, [refreshUserData])
+
+  // Update display points when context changes
+  useEffect(() => {
+    console.log('📊 Profile: Context points changed to:', userPoints)
+    setDisplayPoints(userPoints)
+  }, [userPoints])
 
   const handleSave = async () => {
     try {
@@ -266,7 +293,7 @@ export default function ProfilePage() {
               <div className="text-sm text-muted-foreground">Polls Completed</div>
             </div>
             <div className="text-center p-4 bg-muted/50 rounded-xl">
-              <div className="text-3xl font-bold text-warning mb-1">{userPoints}</div>
+              <div className="text-3xl font-bold text-warning mb-1">{displayPoints}</div>
               <div className="text-sm text-muted-foreground">Points Earned</div>
             </div>
             <div className="text-center p-4 bg-muted/50 rounded-xl">

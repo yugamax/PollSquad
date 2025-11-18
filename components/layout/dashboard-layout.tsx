@@ -7,6 +7,7 @@ import { useAuth } from '../../lib/auth-context'
 import { useState, useEffect, useRef } from 'react'
 import { ProfilePictureUpload } from '@/components/ui/profile-picture-upload'
 import { SignInModal } from '@/components/auth/sign-in-modal'
+import { PointsInfoModal } from '../ui/points-info-modal'
 import Image from 'next/image'
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -14,11 +15,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   
   const router = useRouter()
   const pathname = usePathname()
-  const { user, loading, initializing } = useAuth()
+  const { user, loading, initializing, userPoints, refreshUserData } = useAuth()
   const isHomePage = pathname === '/dashboard'
-  const [userPoints, setUserPoints] = useState(0)
+  const [displayPoints, setDisplayPoints] = useState(0) // Changed from userPoints to displayPoints
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [showSignInModal, setShowSignInModal] = useState(false)
+  const [showPointsModal, setShowPointsModal] = useState(false)
   const sidebarRef = useRef<{ toggleSidebar: () => void }>(null)
 
   useEffect(() => {
@@ -26,7 +28,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       if (!user) return
       
       try {
-        setUserPoints(234)
+        // FIXED: Use actual points from auth context instead of hardcoded 234
+        console.log('🔄 DashboardLayout: Loading user points from auth context:', userPoints)
+        setDisplayPoints(userPoints)
+        
+        // Also force refresh from database
+        await refreshUserData()
       } catch (error) {
         console.error('Error loading user points:', error)
       }
@@ -35,7 +42,13 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     if (isHomePage) {
       loadUserPoints()
     }
-  }, [user, isHomePage])
+  }, [user, userPoints, isHomePage, refreshUserData])
+
+  // Listen for points updates from auth context
+  useEffect(() => {
+    console.log('📊 DashboardLayout: Auth context points changed to:', userPoints)
+    setDisplayPoints(userPoints)
+  }, [userPoints])
 
   const handleProfileClick = () => {
     router.push('/profile')
@@ -55,6 +68,11 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   const handleLockedFeatureClick = () => {
     setShowSignInModal(true)
+  }
+
+  const handlePointsClick = () => {
+    console.log('🔄 DashboardLayout: Points clicked, opening info modal')
+    setShowPointsModal(true)
   }
 
   // Don't render until we know the auth state
@@ -95,6 +113,13 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         onClose={() => setShowSignInModal(false)}
         onSuccess={handleSignInSuccess}
       />
+
+      {/* Points Info Modal */}
+      <PointsInfoModal
+        isOpen={showPointsModal}
+        onClose={() => setShowPointsModal(false)}
+        currentPoints={displayPoints}
+      />
       
       {/* Profile Picture - Desktop only, for homepage, only when authenticated */}
       {isHomePage && user && (
@@ -113,14 +138,18 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       {/* Points Display - Desktop only, for homepage, only when authenticated */}
       {isHomePage && user && (
         <div className={`hidden sm:block fixed top-6 left-36 z-20 transition-all duration-300 transform ${sidebarOpen ? 'opacity-0 -translate-x-4 pointer-events-none' : 'opacity-100 translate-x-0'}`}>
-          <div className="flex items-center gap-2 bg-card/90 backdrop-blur-sm rounded-xl px-3 py-3 border border-border/30 shadow-lg h-[52px]">
+          <div 
+            className="flex items-center gap-2 bg-card/90 backdrop-blur-sm rounded-xl px-3 py-3 border border-border/30 shadow-lg h-[52px] cursor-pointer hover:bg-card/95 hover:shadow-xl transition-all hover:scale-105"
+            onClick={handlePointsClick}
+            title="Click to view points information"
+          >
             <div className="relative">
               <Coins className="w-4 h-4 text-warning" />
               <div className="absolute inset-0 w-4 h-4 bg-warning/20 rounded-full blur-sm"></div>
             </div>
             <div className="flex flex-col justify-center">
               <span className="text-xs text-muted-foreground font-medium leading-tight">Points</span>
-              <span className="text-sm font-bold text-foreground leading-tight">{userPoints.toLocaleString()}</span>
+              <span className="text-sm font-bold text-foreground leading-tight">{displayPoints.toLocaleString()}</span>
             </div>
           </div>
         </div>
@@ -170,13 +199,13 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-2 bg-card/90 backdrop-blur-sm rounded-xl px-3 py-2 border border-border/30 shadow-lg h-[48px]">
+                    <div className="flex items-center gap-2 bg-card/90 backdrop-blur-sm rounded-xl px-3 py-2 border border-border/30 shadow-lg h-[48px] cursor-pointer hover:bg-card/95 hover:shadow-xl transition-all hover:scale-105">
                       <div className="relative">
                         <Coins className="w-4 h-4 text-warning" />
                         <div className="absolute inset-0 w-4 h-4 bg-warning/20 rounded-full blur-sm"></div>
                       </div>
                       <div className="flex flex-col justify-center">
-                        <span className="text-xs font-bold text-foreground leading-tight">{userPoints.toLocaleString()}</span>
+                        <span className="text-xs font-bold text-foreground leading-tight">{displayPoints.toLocaleString()}</span>
                       </div>
                     </div>
 

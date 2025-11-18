@@ -65,6 +65,7 @@ export function PollCard({
   const [showPointsAnimation, setShowPointsAnimation] = useState(false)
   const [isBoostModalOpen, setIsBoostModalOpen] = useState(false)
   const [isRequestDataModalOpen, setIsRequestDataModalOpen] = useState(false)
+  const [finalSubmitLoading, setFinalSubmitLoading] = useState(false)
   const isOwner = user?.uid === ownerUid
 
   useEffect(() => {
@@ -156,18 +157,69 @@ export function PollCard({
             setTimeout(() => setShowPointsAnimation(false), 2000)
             
             console.log('✅ Poll completion points awarded:', pointsAwarded)
+            // REMOVED: No alert message, points shown through animation
           }
         } else {
           console.log('⚠️ User already received points for completing this poll')
         }
-      }, 500) // Small delay to ensure vote processing is complete
+      }, 500)
       
       onRefresh?.()
       
     } catch (error) {
       console.error('Error submitting vote:', error)
+      // Keep error alerts for important feedback
+      alert('Error submitting vote. Please try again.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  // NEW: Handle final poll submission for multi-question polls
+  const handleFinalSubmit = async () => {
+    if (!user) return
+    
+    const totalQuestions = questions.length
+    const answeredQuestions = Object.keys(userVotes).length
+    
+    if (answeredQuestions < totalQuestions) {
+      alert(`Please answer all ${totalQuestions} questions before submitting the poll.`)
+      return
+    }
+
+    setFinalSubmitLoading(true)
+
+    try {
+      console.log('🎯 Final poll submission - checking for points award...')
+      
+      // Check if they already got points for this poll
+      const alreadyRewarded = await hasReceivedPollCompletionPoints(user.uid, pollId)
+      
+      if (!alreadyRewarded) {
+        const hasCompleted = await hasUserCompletedPoll(user.uid, pollId)
+        
+        if (hasCompleted) {
+          console.log('🎉 User has completed the entire poll for the FIRST TIME!')
+          
+          const pointsAwarded = await awardPollCompletionPoints(user.uid, pollId, totalVotes)
+          
+          setPointsEarned(pointsAwarded)
+          setShowPointsAnimation(true)
+          setTimeout(() => setShowPointsAnimation(false), 2000)
+          
+          console.log('✅ Poll completion points awarded:', pointsAwarded)
+          // REMOVED: No alert message, points shown through animation
+          
+          onRefresh?.()
+        }
+      } else {
+        console.log('⚠️ User already received points for completing this poll')
+      }
+    } catch (error) {
+      console.error('❌ Error in final poll submission:', error)
+      alert('Error submitting poll. Please try again.')
+    } finally {
+      setFinalSubmitLoading(false)
     }
   }
 
@@ -340,9 +392,66 @@ export function PollCard({
                   {loading ? 'Voting...' : `✓ Vote${questions.length > 1 ? ` on Question ${qIndex + 1}` : ''}`}
                 </button>
               )}
+
+              {/* Individual question vote button - only for single question polls */}
+              {questions.length === 1 && user && !hasVotedThisQuestion && !isOwner && selectedForThisQuestion.length > 0 && (
+                <button
+                  onClick={() => handleSubmitVote(question.id)}
+                  disabled={loading}
+                  className="w-full px-4 py-2 bg-primary text-white font-bold rounded-xl text-sm comic-shadow hover:comic-shadow-hover transition-all disabled:opacity-50"
+                >
+                  {loading ? 'Voting...' : '✓ Submit Vote'}
+                </button>
+              )}
+
+              {/* Multi-question: Individual question submit button */}
+              {questions.length > 1 && user && !hasVotedThisQuestion && !isOwner && selectedForThisQuestion.length > 0 && (
+                <button
+                  onClick={() => handleSubmitVote(question.id)}
+                  disabled={loading}
+                  className="w-full px-4 py-2 bg-secondary text-white font-bold rounded-xl text-sm comic-shadow hover:comic-shadow-hover transition-all disabled:opacity-50"
+                >
+                  {loading ? 'Submitting...' : `✓ Submit Answer ${qIndex + 1}`}
+                </button>
+              )}
             </div>
           )
         })}
+
+        {/* Final Submit Button for Multi-Question Polls */}
+        {questions.length > 1 && user && !isOwner && (
+          <div className="mt-6 pt-4 border-t border-border">
+            {(() => {
+              const answeredQuestions = Object.keys(userVotes).length
+              const allAnswered = answeredQuestions === questions.length
+
+              return (
+                <div className="text-center space-y-3">
+                  <div className="text-sm text-muted-foreground">
+                    Progress: {answeredQuestions} of {questions.length} questions answered
+                  </div>
+                  
+                  {allAnswered ? (
+                    <button
+                      onClick={handleFinalSubmit}
+                      disabled={finalSubmitLoading}
+                      className="w-full px-6 py-3 bg-gradient-to-r from-primary to-primary/80 text-white font-bold rounded-xl comic-shadow hover:comic-shadow-hover transition-all disabled:opacity-50"
+                    >
+                      {finalSubmitLoading ? 'Submitting Poll...' : '🎉 Submit Complete Poll & Earn Points'}
+                    </button>
+                  ) : (
+                    <button
+                      disabled
+                      className="w-full px-6 py-3 bg-muted text-muted-foreground font-bold rounded-xl cursor-not-allowed"
+                    >
+                      Answer all questions to submit poll
+                    </button>
+                  )}
+                </div>
+              )
+            })()}
+          </div>
+        )}
       </div>
 
       {/* Footer */}

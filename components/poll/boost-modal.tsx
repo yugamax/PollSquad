@@ -14,9 +14,9 @@ interface BoostModalProps {
 }
 
 const BOOST_DURATIONS = [
-  { hours: 6, cost: 50 },
-  { hours: 24, cost: 100 },
-  { hours: 72, cost: 200 }
+  { hours: 6, cost: 60 }, // UPDATED: Changed from 50 to 60
+  { hours: 24, cost: 120 }, // UPDATED: Changed from 100 to 120  
+  { hours: 72, cost: 240 } // UPDATED: Changed from 200 to 240
 ]
 
 export function BoostModal({ isOpen, pollId, onClose, onSuccess }: BoostModalProps) {
@@ -46,13 +46,14 @@ export function BoostModal({ isOpen, pollId, onClose, onSuccess }: BoostModalPro
         boostedUntil: Timestamp.fromDate(boostUntil)
       })
 
-      // Deduct points from user
-      const userData = await getUserData(user.uid)
-      if (userData) {
-        await updatePoll(user.uid, {
-          points: userData.points - selectedDuration.cost
-        })
-      }
+      // FIXED: Deduct points from user using proper user update
+      await updateDoc(doc(db, 'users', user.uid), {
+        points: increment(-selectedDuration.cost), // Subtract points
+        lastUpdated: serverTimestamp()
+      })
+
+      // Refresh user data to update context
+      await refreshUserData()
 
       onSuccess()
       onClose()

@@ -7,7 +7,6 @@ import { getFeedPolls, submitVote, getUserVotesForPoll } from '../../lib/db-serv
 import { useAuth } from '../../lib/auth-context'
 import { awardPoints, calculatePoints, awardPollCompletionPoints } from '../../lib/points-service'
 import { hasUserCompletedPoll, hasReceivedPollCompletionPoints, hasUserVotedOnPoll } from '../../lib/db-service'
-import { updateAllUserPointsTo40 } from '../../lib/admin-utils'
 
 // Match the actual Poll interface from db-service
 interface Poll {
@@ -47,6 +46,7 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
   const [votingLoading, setVotingLoading] = useState<Record<string, boolean>>({})
   const [selectedPoll, setSelectedPoll] = useState<Poll | null>(null)
   const [votingModal, setVotingModal] = useState(false)
+  const [finalSubmitLoading, setFinalSubmitLoading] = useState<Record<string, boolean>>({})
   const loadingRef = useRef(false) // Prevent multiple simultaneous loads
 
   // Don't load polls if user is not authenticated
@@ -262,17 +262,15 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
             
             console.log('✅ Poll completion points awarded:', pointsAwarded)
             
-            // Show success message
-            if (pointsAwarded > 0) {
-              alert(`🎉 Poll completed! You earned ${pointsAwarded} points!`)
-            }
+            // REMOVED: No more alert messages for successful point awards
+            // Show points award silently through UI updates only
           } else {
             console.log('📊 Poll not yet fully completed by user')
           }
         } else {
           console.log('⚠️ User already received points for completing this poll')
         }
-      }, 500) // Small delay to ensure vote processing is complete
+      }, 500)
       
       // Refresh data
       console.log('🔄 Refreshing polls after successful vote...')
@@ -282,7 +280,7 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
     } catch (error) {
       console.error('❌ Error submitting vote:', error)
       
-      // Show specific error messages
+      // Keep error alerts for important feedback
       if (error.message?.includes('already voted')) {
         alert('You have already voted on this question.')
       } else if (error.code === 'permission-denied') {
@@ -292,6 +290,59 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
       }
     } finally {
       setVotingLoading(prev => ({ ...prev, [`${pollId}-${questionId}`]: false }))
+    }
+  }
+
+  // NEW: Handle final poll submission for multi-question polls
+  const handleFinalSubmit = async (pollId: string) => {
+    if (!user || !selectedPoll) return
+    
+    const totalQuestions = selectedPoll.questions?.length || 0
+    const answeredQuestions = Object.keys(userVotes[pollId] || {}).length
+    
+    if (answeredQuestions < totalQuestions) {
+      alert(`Please answer all ${totalQuestions} questions before submitting the poll.`)
+      return
+    }
+
+    setFinalSubmitLoading(prev => ({ ...prev, [pollId]: true }))
+
+    try {
+      console.log('🎯 Final poll submission - checking for points award...')
+      
+      // Check if they already got points for this poll
+      const alreadyRewarded = await hasReceivedPollCompletionPoints(user.uid, pollId)
+      
+      if (!alreadyRewarded) {
+        const hasCompleted = await hasUserCompletedPoll(user.uid, pollId)
+        
+        if (hasCompleted) {
+          console.log('🎉 User has completed the entire poll for the FIRST TIME!')
+          
+          const poll = polls.find(p => p.pollId === pollId)
+          const totalVotes = poll?.totalVotes || 0
+          
+          const pointsAwarded = await awardPollCompletionPoints(user.uid, pollId, totalVotes)
+          
+          console.log('✅ Poll completion points awarded:', pointsAwarded)
+          
+          // REMOVED: No more alert messages for successful submissions
+          // Points will be shown through UI updates and animations
+
+          // Close modal and refresh
+          closeVotingModal()
+          await loadPolls()
+          onRefresh?.()
+        }
+      } else {
+        console.log('⚠️ User already received points for completing this poll')
+        closeVotingModal()
+      }
+    } catch (error) {
+      console.error('❌ Error in final poll submission:', error)
+      alert('Error submitting poll. Please try again.')
+    } finally {
+      setFinalSubmitLoading(prev => ({ ...prev, [pollId]: false }))
     }
   }
 
@@ -312,121 +363,6 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
     }
   }, [user, authLoading])
 
-  // Add debug button for testing (temporary)
-  const forceRefreshPoints = async () => {
-    console.log('🔄 Force refresh points clicked')
-    await refreshUserData()
-  }
-
-  // Admin function to update all user points
-  const handleUpdateAllPoints = async () => {
-    if (!user) return
-    
-    const confirmed = confirm('Are you sure you want to update ALL users to 40 points? This cannot be undone.')
-    if (!confirmed) return
-    
-    try {
-      console.log('🔄 Starting admin operation: Update all users to 40 points')
-      const updatedCount = await updateAllUserPointsTo40()
-      alert(`✅ Successfully updated ${updatedCount} users to 40 points!`)
-      await refreshUserData() // Refresh current user's points
-      window.location.reload() // Force page refresh to see changes
-    } catch (error) {
-      console.error('❌ Error updating points:', error)
-      alert('❌ Failed to update points. Check console for details.')
-    }
-  }
-
-  // Show loading while auth is being determined
-  if (authLoading) {
-    return (
-      <div className="text-center py-12">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
-        <p className="text-muted-foreground mt-4">Loading...</p>
-      </div>
-    )
-  }
-
-  // Show login prompt for unauthenticated users
-  if (!user) {
-    return (
-      <div className="text-center py-16 card-elevated">
-        <div className="w-24 h-24 mx-auto mb-6 bg-primary/10 rounded-full flex items-center justify-center">
-          <Lock className="w-12 h-12 text-primary" />
-        </div>
-        <h3 className="text-2xl font-bold mb-3 text-foreground">Sign In Required</h3>
-        <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-          To view and participate in polls, please sign in with your account. 
-          Join our community to discover interesting polls and share your opinions!
-        </p>
-        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <div className="w-4 h-4 bg-success/20 rounded-full flex items-center justify-center">
-              <span className="text-success text-xs">✓</span>
-            </div>
-            <span>View all polls</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <div className="w-4 h-4 bg-success/20 rounded-full flex items-center justify-center">
-              <span className="text-success text-xs">✓</span>
-            </div>
-            <span>Vote and earn points</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <div className="w-4 h-4 bg-success/20 rounded-full flex items-center justify-center">
-              <span className="text-success text-xs">✓</span>
-            </div>
-            <span>Create your own polls</span>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // Show loading for authenticated users
-  if (loading) {
-    return (
-      <div className="text-center py-12">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
-        <p className="text-muted-foreground mt-4">Loading polls...</p>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="text-center py-12 card-elevated">
-        <div className="text-4xl mb-4">⚠️</div>
-        <h3 className="text-xl font-bold mb-2 text-foreground">Error Loading Polls</h3>
-        <p className="text-muted-foreground mb-4">{error}</p>
-        <button 
-          onClick={loadPolls}
-          className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/80 transition-colors"
-        >
-          Try Again
-        </button>
-      </div>
-    )
-  }
-
-  if (!Array.isArray(polls) || polls.length === 0) {
-    return (
-      <div className="text-center py-12 card-elevated">
-        <div className="text-4xl mb-4">📊</div>
-        <h3 className="text-xl font-bold mb-2 text-foreground">No Polls Available</h3>
-        <p className="text-muted-foreground mb-4">
-          Be the first to create a poll and start the conversation!
-        </p>
-        <button 
-          onClick={onRefresh}
-          className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/80 transition-colors"
-        >
-          Refresh
-        </button>
-      </div>
-    )
-  }
-
   return (
     <>
       <div className="space-y-6">
@@ -441,17 +377,6 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
                 <span className="font-medium">+5 points per poll completed</span>
                 <span className="text-xs opacity-75">({userPoints} total)</span>
               </div>
-            )}
-            
-            {/* Admin Controls */}
-            {user && (
-              <button 
-                onClick={handleUpdateAllPoints}
-                className="text-red-500 hover:text-red-600 hover:underline font-bold text-sm sm:text-base bg-red-50 px-3 py-1 rounded-lg border border-red-200"
-                title="Admin: Set all existing users to 40 points"
-              >
-                🔧 Set All Users to 40 Points
-              </button>
             )}
             
             <button 
@@ -765,6 +690,50 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
                       </div>
                     )
                   })}
+
+                  {/* Final Submit Button for Multi-Question Polls */}
+                  {selectedPoll.questions && selectedPoll.questions.length > 1 && (
+                    <div className="mt-8 pt-6 border-t border-border">
+                      {(() => {
+                        const totalQuestions = selectedPoll.questions.length
+                        const answeredQuestions = Object.keys(userVotes[selectedPoll.pollId] || {}).length
+                        const allAnswered = answeredQuestions === totalQuestions
+                        const isSubmitting = finalSubmitLoading[selectedPoll.pollId]
+
+                        return (
+                          <div className="text-center space-y-4">
+                            <div className="text-sm text-muted-foreground">
+                              Progress: {answeredQuestions} of {totalQuestions} questions answered
+                            </div>
+                            
+                            {allAnswered ? (
+                              <button
+                                onClick={() => handleFinalSubmit(selectedPoll.pollId)}
+                                disabled={isSubmitting}
+                                className="w-full px-6 py-4 bg-gradient-to-r from-primary to-primary/80 text-white font-bold rounded-lg hover:from-primary/90 hover:to-primary/70 transition-all disabled:opacity-50 text-lg shadow-lg"
+                              >
+                                {isSubmitting ? (
+                                  <div className="flex items-center justify-center gap-2">
+                                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                    Submitting Poll...
+                                  </div>
+                                ) : (
+                                  <>🎉 Submit Complete Poll & Earn Points</>
+                                )}
+                              </button>
+                            ) : (
+                              <button
+                                disabled
+                                className="w-full px-6 py-4 bg-muted text-muted-foreground font-bold rounded-lg cursor-not-allowed text-lg"
+                              >
+                                Answer all questions to submit poll
+                              </button>
+                            )}
+                          </div>
+                        )
+                      })()}
+                    </div>
+                  )}
                 </div>
               </div>
 

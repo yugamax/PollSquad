@@ -50,28 +50,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // NEW: Function to refresh user data from database
+  // Function to refresh user data from database
   const refreshUserData = async () => {
     if (user) {
       try {
-        console.log('🔄 Refreshing user data from database for:', user.uid)
+        console.log('🔄 AUTH CONTEXT: Force refreshing from DB for user:', user.uid)
         const userData = await getUserData(user.uid)
         if (userData) {
           const dbPoints = userData.points || 0
+          console.log('📊 AUTH CONTEXT: Database points retrieved:', dbPoints)
           setUserPoints(dbPoints)
-          console.log('✅ User points refreshed from database:', dbPoints)
           
-          // Clear any browser cache
+          // Clear any browser storage that might interfere
           if (typeof window !== 'undefined') {
             localStorage.removeItem('userPoints')
             sessionStorage.removeItem('userPoints')
+            
+            // Dispatch event to notify all components
+            window.dispatchEvent(new CustomEvent('forcePointsRefresh', { 
+              detail: { points: dbPoints, timestamp: Date.now() } 
+            }))
           }
+          
+          console.log('✅ AUTH CONTEXT: Points updated to:', dbPoints)
         } else {
-          console.log('⚠️ No user data found in database')
+          console.log('⚠️ AUTH CONTEXT: No user data found, setting to 0')
           setUserPoints(0)
         }
       } catch (error) {
-        console.error('❌ Error refreshing user data:', error)
+        console.error('❌ AUTH CONTEXT: Error refreshing user data:', error)
         setUserPoints(0)
       }
     } else {
@@ -91,7 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('🔐 User signed in:', firebaseUser.uid)
         
         try {
-          // ALWAYS fetch fresh data from database
+          // ALWAYS fetch fresh data from database - ignore any cached values
           let userData = await getUserData(firebaseUser.uid)
           
           if (!userData) {
@@ -114,12 +121,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           setUser(userWithId)
           
-          // FORCE database points, ignore any cached values
+          // CRITICAL: Always use database points, never cache
           const dbPoints = userData?.points || 0
           setUserPoints(dbPoints)
-          console.log('📊 FORCED User points from database:', dbPoints)
+          console.log('📊 INITIAL User points set from database:', dbPoints)
           
-          // Clear browser storage
+          // Clear any cached data immediately
           if (typeof window !== 'undefined') {
             localStorage.clear()
             sessionStorage.clear()

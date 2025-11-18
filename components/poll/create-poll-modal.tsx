@@ -38,7 +38,8 @@ export function CreatePollModal({ isOpen, onClose, onSuccess }: CreatePollModalP
 
     try {
       setLoading(true)
-      await createPoll({
+      
+      const pollId = await createPoll({
         ownerUid: user.uid,
         ownerName: user.displayName || 'Anonymous',
         ownerImage: user.photoURL,
@@ -57,14 +58,17 @@ export function CreatePollModal({ isOpen, onClose, onSuccess }: CreatePollModalP
         tags: tags.split(',').map(t => t.trim()).filter(t => t),
         visible: true
       })
-
-      setTitle('')
-      setOptions(['', ''])
-      setTags('')
-      onSuccess()
+      console.log('✅ Poll created successfully:', pollId)
+      
+      // REMOVED: No success alert message
+      // Close modal and refresh without showing alert
+      onSuccess?.()
       onClose()
+      
     } catch (error) {
-      console.error('Error creating poll:', error)
+      console.error('❌ Error creating poll:', error)
+      // Keep error alerts for important feedback
+      alert('Failed to create poll. Please try again.')
     } finally {
       setLoading(false)
     }
