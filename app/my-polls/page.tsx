@@ -101,17 +101,31 @@ export default function MyPollsPage() {
     } catch (error) {
       console.error('❌ Error deleting poll:', error)
       
+      // Normalize error message from unknown error type
+      let rawMessage: string
+      if (error instanceof Error) {
+        rawMessage = error.message
+      } else if (typeof error === 'string') {
+        rawMessage = error
+      } else {
+        try {
+          rawMessage = JSON.stringify(error)
+        } catch {
+          rawMessage = String(error)
+        }
+      }
+      
       // Show specific error messages based on error type
       let errorMessage = `❌ Failed to delete poll "${pollTitle}".`
       
-      if (error.message.includes('Permission denied')) {
+      if (rawMessage.includes('Permission denied')) {
         errorMessage += '\n\nError: You can only delete polls you created.'
-      } else if (error.message.includes('not found')) {
+      } else if (rawMessage.includes('not found')) {
         errorMessage += '\n\nError: Poll not found or already deleted.'
-      } else if (error.message.includes('unavailable')) {
+      } else if (rawMessage.includes('unavailable')) {
         errorMessage += '\n\nError: Database temporarily unavailable. Please try again in a moment.'
       } else {
-        errorMessage += `\n\nError: ${error.message}`
+        errorMessage += `\n\nError: ${rawMessage}`
       }
       
       errorMessage += '\n\nPlease try again or contact support if the problem persists.'
