@@ -1,7 +1,8 @@
 'use client'
 
-import { DashboardLayout } from '@/components/layout/dashboard-layout'
-import { useAuth } from '@/lib/auth-context'
+// Fix import paths to use relative imports
+import { DashboardLayout } from '../../components/layout/dashboard-layout'
+import { useAuth } from '../../lib/auth-context'
 import { useState, useEffect } from 'react'
 import { Download, Eye, Calendar, Database } from 'lucide-react'
 

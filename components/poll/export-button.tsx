@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { generateCSV, downloadFile, generateXLSX } from '@/lib/export-service'
-import type { Poll } from '@/lib/db-types'
+// Remove the @/ alias and use relative path
+import { generateCSV, downloadFile, generateXLSX } from '../../lib/export-service'
+import type { Poll } from '../../lib/db-types'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface ExportButtonProps {

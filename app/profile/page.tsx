@@ -1,9 +1,10 @@
 'use client'
 
-import { DashboardLayout } from '@/components/layout/dashboard-layout'
-import { ProfilePictureUpload } from '@/components/ui/profile-picture-upload'
-import { useAuth } from '@/lib/auth-context'
-import { getUserData } from '@/lib/db-service'
+// Fix import paths to use relative imports
+import { DashboardLayout } from '../../components/layout/dashboard-layout'
+import { ProfilePictureUpload } from '../../components/ui/profile-picture-upload'
+import { useAuth } from '../../lib/auth-context'
+import { getUserData } from '../../lib/db-service'
 import { useState, useEffect } from 'react'
 import { Save, AlertCircle, X } from 'lucide-react'
 

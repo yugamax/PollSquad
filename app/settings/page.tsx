@@ -1,8 +1,9 @@
 'use client'
 
-import { DashboardLayout } from '@/components/layout/dashboard-layout'
-import { useAuth } from '@/lib/auth-context'
-import { useTheme } from '@/lib/theme-context'
+// Fix import paths to use relative imports
+import { DashboardLayout } from '../../components/layout/dashboard-layout'
+import { useAuth } from '../../lib/auth-context'
+import { useTheme } from '../../lib/theme-context'
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Moon, Sun, Trash2, Shield, Bell, Globe } from 'lucide-react'
