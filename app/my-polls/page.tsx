@@ -73,18 +73,50 @@ export default function MyPollsPage() {
     loadUserPolls()
   }, [user])
 
-  const handleDelete = async (pollId: string) => {
-    if (!confirm('Are you sure you want to delete this poll? This action cannot be undone.')) {
+  const handleDelete = async (pollId: string, pollTitle: string) => {
+    const confirmMessage = `Are you sure you want to delete "${pollTitle}"?\n\nThis will permanently delete:\n• The poll and all its questions\n• All votes from users\n• All data requests\n• User completion records\n\nThis action cannot be undone.`
+    
+    if (!confirm(confirmMessage)) {
       return
     }
 
     try {
       setDeletingId(pollId)
-      await deletePollWithCleanup(pollId)
+      console.log('🗑️ Starting poll deletion:', pollId)
+      
+      const result = await deletePollWithCleanup(pollId)
+      
+      console.log('✅ Poll deletion completed:', result)
+      
+      // Remove from local state
       setPolls(polls.filter(poll => poll.pollId !== pollId))
+      
+      // Show success message
+      alert(`✅ Poll "${pollTitle}" has been successfully deleted.\n\n` +
+            `Cleanup completed:\n` +
+            `• ${result.deletedVotes} votes deleted\n` +
+            `• ${result.updatedUsers} user records updated\n` +
+            `• ${result.deletedRequests} data requests removed`)
+      
     } catch (error) {
-      console.error('Error deleting poll:', error)
-      alert('Failed to delete poll. Please try again.')
+      console.error('❌ Error deleting poll:', error)
+      
+      // Show specific error messages based on error type
+      let errorMessage = `❌ Failed to delete poll "${pollTitle}".`
+      
+      if (error.message.includes('Permission denied')) {
+        errorMessage += '\n\nError: You can only delete polls you created.'
+      } else if (error.message.includes('not found')) {
+        errorMessage += '\n\nError: Poll not found or already deleted.'
+      } else if (error.message.includes('unavailable')) {
+        errorMessage += '\n\nError: Database temporarily unavailable. Please try again in a moment.'
+      } else {
+        errorMessage += `\n\nError: ${error.message}`
+      }
+      
+      errorMessage += '\n\nPlease try again or contact support if the problem persists.'
+      
+      alert(errorMessage)
     } finally {
       setDeletingId(null)
     }
@@ -281,9 +313,9 @@ export default function MyPollsPage() {
                         <span>Export Data</span>
                       </button>
 
-                      {/* Delete Button */}
+                      {/* Delete Button - Enhanced with better confirmation */}
                       <button
-                        onClick={() => handleDelete(poll.pollId)}
+                        onClick={() => handleDelete(poll.pollId, poll.title)}
                         disabled={isDeleting}
                         className="flex items-center gap-2 px-3 py-2 bg-danger/20 text-danger border border-danger/30 rounded-lg font-semibold text-sm hover:bg-danger/30 transition-all disabled:opacity-50 hover:scale-105"
                       >

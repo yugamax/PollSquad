@@ -33,13 +33,13 @@ export default function DashboardPage() {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-8 sm:mb-12 text-center"
+        className="mb-6 sm:mb-8 text-center"
       >
-        <div className="card-elevated content-overlay p-4 sm:p-8 mb-6 sm:mb-8">
-          <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4 text-primary">
+        <div className="card-elevated content-overlay p-3 sm:p-4 mb-4 sm:mb-6">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2 sm:mb-3 text-primary">
             Discover Polls
           </h2>
-          <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto px-4">
+          <p className="text-sm sm:text-base text-muted-foreground max-w-2xl mx-auto px-4">
             Vote on interesting polls from the community and earn points
           </p>
         </div>

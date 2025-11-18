@@ -21,15 +21,15 @@ export const metadata: Metadata = {
         media: '(prefers-color-scheme: light)',
       },
       {
-        url: '/polledindark.png',
+        url: '/web_icon.png',
         media: '(prefers-color-scheme: dark)',
       },
       {
-        url: '/polledinicon.svg',
-        type: 'image/svg+xml',
+        url: '/web_icon.png',
+        type: 'image/svg+xml+png',
       },
     ],
-    apple: '/polledin.png',
+    apple: '/web_icon.png',
   },
 }
 

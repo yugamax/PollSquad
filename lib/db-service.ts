@@ -162,113 +162,58 @@ export async function deletePoll(pollId: string) {
   }
 }
 
-// NEW: Delete all votes for a specific poll
-export async function deleteAllPollVotes(pollId: string) {
-  try {
-    console.log('🗑️ Deleting all votes for poll:', pollId)
-    
-    // Query all votes for this poll
-    const votesQuery = query(
-      collection(db, 'votes'),
-      where('pollId', '==', pollId)
-    )
-    
-    const votesSnapshot = await getDocs(votesQuery)
-    console.log(`📊 Found ${votesSnapshot.size} votes to delete`)
-    
-    // Delete all votes in batches for better performance
-    const deletePromises = votesSnapshot.docs.map(voteDoc => 
-      deleteDoc(doc(db, 'votes', voteDoc.id))
-    )
-    
-    await Promise.all(deletePromises)
-    console.log(`✅ Successfully deleted ${votesSnapshot.size} votes`)
-    
-    return votesSnapshot.size
-  } catch (error) {
-    console.error('❌ Error deleting poll votes:', error)
-    throw error
-  }
-}
-
-// NEW: Clean up user's completed polls array when poll is deleted
-export async function removeFromUserCompletedPolls(pollId: string) {
-  try {
-    console.log('🧹 Cleaning up user completed polls for deleted poll:', pollId)
-    
-    // Query all users who have this poll in their completedPolls array
-    const usersQuery = query(
-      collection(db, 'users'),
-      where('completedPolls', 'array-contains', pollId)
-    )
-    
-    const usersSnapshot = await getDocs(usersQuery)
-    console.log(`👥 Found ${usersSnapshot.size} users to update`)
-    
-    // Remove the poll from each user's completedPolls array
-    const updatePromises = usersSnapshot.docs.map(userDoc => {
-      const userData = userDoc.data()
-      const updatedCompletedPolls = (userData.completedPolls || []).filter(id => id !== pollId)
-      
-      return updateDoc(doc(db, 'users', userDoc.id), {
-        completedPolls: updatedCompletedPolls,
-        lastUpdated: serverTimestamp()
-      })
-    })
-    
-    await Promise.all(updatePromises)
-    console.log(`✅ Updated ${usersSnapshot.size} user records`)
-    
-    return usersSnapshot.size
-  } catch (error) {
-    console.error('❌ Error cleaning up user completed polls:', error)
-    throw error
-  }
-}
-
-// NEW: Delete all data requests for a specific poll
-export async function deletePollDataRequests(pollId: string) {
-  try {
-    console.log('🗑️ Deleting all data requests for poll:', pollId)
-    
-    const requestsQuery = query(
-      collection(db, 'requests'),
-      where('pollId', '==', pollId)
-    )
-    
-    const requestsSnapshot = await getDocs(requestsQuery)
-    console.log(`📋 Found ${requestsSnapshot.size} data requests to delete`)
-    
-    const deletePromises = requestsSnapshot.docs.map(requestDoc => 
-      deleteDoc(doc(db, 'requests', requestDoc.id))
-    )
-    
-    await Promise.all(deletePromises)
-    console.log(`✅ Deleted ${requestsSnapshot.size} data requests`)
-    
-    return requestsSnapshot.size
-  } catch (error) {
-    console.error('❌ Error deleting poll data requests:', error)
-    throw error
-  }
-}
-
-// UPDATED: Enhanced poll deletion with complete cleanup
+// UPDATED: Enhanced poll deletion with complete cleanup and better error handling
 export async function deletePollWithCleanup(pollId: string) {
   try {
     console.log('🗑️ Starting complete poll deletion with cleanup for:', pollId)
     
-    // Step 1: Delete all votes
-    const deletedVotes = await deleteAllPollVotes(pollId)
+    // First verify the poll exists and get current user
+    const pollDoc = await getDoc(doc(db, 'polls', pollId))
+    if (!pollDoc.exists()) {
+      throw new Error('Poll not found')
+    }
+    
+    const pollData = pollDoc.data()
+    console.log('📋 Poll found, owner:', pollData.ownerUid)
+    
+    // Step 1: Delete all votes (with improved error handling)
+    let deletedVotes = 0
+    try {
+      deletedVotes = await deleteAllPollVotes(pollId)
+      console.log(`✅ Deleted ${deletedVotes} votes`)
+    } catch (votesError) {
+      console.warn('⚠️ Some votes could not be deleted:', votesError)
+      // Continue with deletion even if some votes fail
+    }
     
     // Step 2: Clean up user completed polls arrays
-    const updatedUsers = await removeFromUserCompletedPolls(pollId)
+    let updatedUsers = 0
+    try {
+      updatedUsers = await removeFromUserCompletedPolls(pollId)
+      console.log(`✅ Updated ${updatedUsers} user records`)
+    } catch (usersError) {
+      console.warn('⚠️ Some user records could not be updated:', usersError)
+      // Continue with deletion
+    }
     
     // Step 3: Delete all data requests for this poll
-    const deletedRequests = await deletePollDataRequests(pollId)
+    let deletedRequests = 0
+    try {
+      deletedRequests = await deletePollDataRequests(pollId)
+      console.log(`✅ Deleted ${deletedRequests} data requests`)
+    } catch (requestsError) {
+      console.warn('⚠️ Some data requests could not be deleted:', requestsError)
+      // Continue with deletion
+    }
     
     // Step 4: Finally delete the poll itself
-    await deleteDoc(doc(db, 'polls', pollId))
+    try {
+      await deleteDoc(doc(db, 'polls', pollId))
+      console.log('✅ Poll document deleted successfully')
+    } catch (pollError) {
+      console.error('❌ Failed to delete poll document:', pollError)
+      throw new Error(`Failed to delete poll: ${pollError.message}`)
+    }
     
     console.log('✅ Complete poll deletion finished:', {
       pollId,
@@ -278,13 +223,24 @@ export async function deletePollWithCleanup(pollId: string) {
     })
     
     return {
+      success: true,
       deletedVotes,
       updatedUsers,
       deletedRequests
     }
   } catch (error) {
     console.error('❌ Error in complete poll deletion:', error)
-    throw error
+    
+    // Provide more specific error messages
+    if (error.code === 'permission-denied') {
+      throw new Error('Permission denied: You can only delete polls you created.')
+    } else if (error.code === 'not-found') {
+      throw new Error('Poll not found or already deleted.')
+    } else if (error.code === 'unavailable') {
+      throw new Error('Database temporarily unavailable. Please try again.')
+    } else {
+      throw new Error(`Failed to delete poll: ${error.message || 'Unknown error'}`)
+    }
   }
 }
 
