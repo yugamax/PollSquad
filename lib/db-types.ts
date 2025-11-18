@@ -23,6 +23,7 @@ export interface Poll {
   questions: PollQuestion[]
   tags: string[]
   totalVotes: number
+  voters: string[] // NEW: Track who has voted on this poll
   createdAt: Date
   expiresAt?: Date
   boostedUntil?: Date
@@ -44,12 +45,13 @@ export interface User {
   email: string
   photoURL?: string
   points: number
+  completedPolls: string[] // NEW: Track completed polls for points
   createdAt: Date
   settings: {
     emailNotifications: boolean
-    profileVisibility: boolean // New field
+    profileVisibility: boolean // NEW: Control profile visibility
   }
-  profile?: { // New profile section
+  profile?: { // NEW: Extended profile information
     bio?: string
     college?: string
     course?: string

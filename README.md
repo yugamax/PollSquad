@@ -417,9 +417,10 @@ firebase deploy --only hosting
 ## Points System
 
 ### Points Allocation
-- **Base Points**: 5 points per poll answer
-- **Streak Bonus**: +10 points for 3+ consecutive answers
-- **Undersampled Bonus**: +15 points for polls with < 50 total votes
+- **Starting Points**: 25 points for new accounts
+- **Poll Completion**: 5 points per fully completed poll (all questions answered)
+- **Undersampled Bonus**: +15 additional points for polls with < 50 total votes
+- **One-Time Rewards**: Points awarded only once per poll, regardless of question count
 - **Boost Cost**: 50-200 points depending on boost duration
 
 ### Boost Pricing
@@ -568,3 +569,51 @@ MIT License - feel free to use this for your projects!
 ## Support
 
 For issues or questions, please open an GitHub issue or contact support.
+
+## 🔧 **RECENT FIXES: Profile Settings & Vote Tracking**
+
+### **Issues Resolved:**
+- ✅ **Profile Settings Added** - Added profile settings option to sidebar navigation with user icon
+- ✅ **Vote Tracking Fixed** - Fixed issue where votes from different accounts were being mixed up
+- ✅ **Checkbox Alignment** - Fixed misaligned tick marks in checkboxes on desktop mode
+- ✅ **Account Switching** - Proper vote data clearing when switching between accounts
+- ✅ **Points System Updated** - New accounts start with 25 points, earn 5 points per completed poll
+
+### **Points System Details:**
+- **New Account**: Start with 25 points
+- **Complete Poll**: +5 points (must answer ALL questions in one poll)
+- **Undersampled Poll Bonus**: +15 additional points (polls with <50 votes)
+- **One-Time Reward**: Points awarded only once per poll completion
+- **No Question-Level Points**: Individual questions no longer give points
+
+### **New Points System:**
+- **Starting Points** - All new accounts begin with 25 points automatically
+- **Poll Completion Rewards** - Earn 5 points only when you complete ALL questions in a poll
+- **No Per-Question Points** - Points are no longer awarded for individual questions
+- **Completion Tracking** - System tracks which polls you've fully completed to prevent double rewards
+- **Undersampled Bonus** - Additional 15 points for completing polls with fewer than 50 total votes
+
+### **Profile Settings Integration:**
+- **Sidebar Navigation** - Added "Profile Settings" link with user icon between Home and Settings
+- **Easy Access** - Direct navigation to profile customization page at `/profile`
+- **Consistent UI** - Follows same design patterns as other sidebar items
+- **User-Friendly** - Clear icon and label for easy identification
+
+### **Vote Tracking Improvements:**
+- **User-Specific Votes** - Each user account now properly tracks only their own votes
+- **Account Switching** - Switching accounts properly clears and reloads vote data with immediate effect
+- **Enhanced Logging** - Improved debugging logs for better vote tracking verification
+- **Data Integrity** - Prevents vote leakage between different user accounts with double verification
+- **Separate Effects** - Split useEffect hooks for user changes vs poll changes for better performance
+
+### **UI/UX Fixes:**
+- **Checkbox Centering** - Tick marks now properly centered in checkboxes using flexbox alignment
+- **Font Weight** - Made checkmarks bold for better visibility and consistency
+- **Responsive Alignment** - Fixed alignment issues across different screen sizes
+- **Visual Consistency** - Checkboxes look consistent across all voting interfaces
+
+### **Technical Improvements:**
+- **Effect Separation** - Split user tracking and poll tracking into separate useEffect hooks
+- **State Management** - Better clearing of vote states when switching accounts
+- **Performance** - Reduced unnecessary re-renders by optimizing dependency arrays
+- **Debug Logging** - Enhanced console logs for easier troubleshooting

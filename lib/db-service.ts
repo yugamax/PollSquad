@@ -31,7 +31,8 @@ export async function createUserData(uid: string, user: Partial<User>) {
     displayName: user.displayName,
     email: user.email,
     photoURL: user.photoURL,
-    points: 0,
+    points: 40, // UPDATED: Changed from 25 to 40 points
+    completedPolls: [], // NEW: Track completed polls for points
     createdAt: serverTimestamp(),
     settings: {
       emailNotifications: true,
@@ -230,31 +231,51 @@ export async function getUserPolls(uid: string) {
   }
 }
 
-// Vote operations
+// Vote operations - Enhanced to include vote tracking in poll document
 export async function submitVote(vote: Omit<Vote, 'voteId' | 'createdAt'>) {
-  console.log('🗳️ Submitting vote:', vote)
+  console.log('🗳️ Submitting vote for user:', vote.userUid, 'on poll:', vote.pollId, 'question:', vote.questionId)
   
   try {
-    // First, check if user has already voted on this question
-    const existingVotes = await getUserVotesForPoll(vote.userUid, vote.pollId)
-    const alreadyVoted = existingVotes.some(v => v.questionId === vote.questionId)
+    // CRITICAL FIX: Only check votes for THIS specific user
+    console.log('🔍 Checking if THIS USER has already voted...')
+    const userSpecificVotes = await getUserVotesForPoll(vote.userUid, vote.pollId)
+    const userAlreadyVoted = userSpecificVotes.some(v => 
+      v.questionId === vote.questionId && 
+      v.userUid === vote.userUid  // Ensure we're only checking this user's votes
+    )
     
-    if (alreadyVoted) {
-      throw new Error('User has already voted on this question')
+    console.log('📊 User specific votes found:', userSpecificVotes.length)
+    console.log('❓ Has this user already voted on this question?', userAlreadyVoted)
+    
+    if (userAlreadyVoted) {
+      console.log('⚠️ THIS USER has already voted on this question')
+      throw new Error(`User ${vote.userUid} has already voted on question ${vote.questionId}`)
     }
 
-    // Add the vote record
-    const voteRef = await addDoc(collection(db, 'votes'), {
-      ...vote,
+    console.log('✅ This user has NOT voted on this question, proceeding...')
+
+    // Add the vote record with explicit user tracking
+    const voteData = {
+      pollId: vote.pollId,
+      questionId: vote.questionId,
+      userUid: vote.userUid, // Ensure userUid is explicitly set
+      selectedOptions: vote.selectedOptions,
       createdAt: serverTimestamp()
-    })
+    }
+    
+    console.log('📝 Creating vote document with data:', voteData)
+    const voteRef = await addDoc(collection(db, 'votes'), voteData)
     
     console.log('✅ Vote recorded with ID:', voteRef.id)
 
-    // Update poll question vote counts
+    // Update poll question vote counts AND add user to voters list
     const poll = await getPoll(vote.pollId)
     if (poll) {
       console.log('📊 Updating poll vote counts for:', vote.pollId)
+      
+      // Get current poll document to merge voter tracking
+      const pollDoc = await getDoc(doc(db, 'polls', vote.pollId))
+      const currentPollData = pollDoc.data()
       
       const updatedQuestions = poll.questions.map(q => {
         if (q.id === vote.questionId) {
@@ -290,13 +311,20 @@ export async function submitVote(vote: Omit<Vote, 'voteId' | 'createdAt'>) {
       const newTotalVotes = updatedQuestions.reduce((sum, q) => sum + q.totalVotes, 0)
       console.log(`🏆 Poll total votes: ${poll.totalVotes} -> ${newTotalVotes}`)
       
-      // Update the poll document
+      // Add user to voters list if not already present
+      const currentVoters = currentPollData?.voters || []
+      const updatedVoters = currentVoters.includes(vote.userUid) 
+        ? currentVoters 
+        : [...currentVoters, vote.userUid]
+      
+      // Update the poll document with vote counts and voter tracking
       await updatePoll(vote.pollId, {
         questions: updatedQuestions,
-        totalVotes: newTotalVotes
+        totalVotes: newTotalVotes,
+        voters: updatedVoters // Track voters in poll document
       })
       
-      console.log('✅ Poll vote counts updated successfully')
+      console.log('✅ Poll vote counts and voter list updated successfully')
     }
     
     return voteRef.id
@@ -307,25 +335,37 @@ export async function submitVote(vote: Omit<Vote, 'voteId' | 'createdAt'>) {
 }
 
 export async function getUserVotesForPoll(uid: string, pollId: string) {
-  console.log('🔍 Getting user votes for poll:', { uid, pollId })
+  console.log('🔍 Getting votes for SPECIFIC USER:', uid, 'on poll:', pollId)
   
   try {
+    // CRITICAL: Ensure we're only getting votes for THIS specific user
     const constraints: QueryConstraint[] = [
-      where('userUid', '==', uid),
-      where('pollId', '==', pollId)
+      where('userUid', '==', uid),  // MUST match exactly
+      where('pollId', '==', pollId) // MUST match exactly
     ]
     
     const q = query(collection(db, 'votes'), ...constraints)
     const querySnapshot = await getDocs(q)
     
-    const votes = querySnapshot.docs.map(doc => ({
-      ...doc.data(),
-      voteId: doc.id,
-      createdAt: doc.data().createdAt?.toDate()
-    })) as Vote[]
+    const votes = querySnapshot.docs.map(doc => {
+      const data = doc.data()
+      console.log('📊 Found vote document:', doc.id, 'data:', data)
+      return {
+        ...data,
+        voteId: doc.id,
+        createdAt: data.createdAt?.toDate()
+      }
+    }) as Vote[]
     
-    console.log('📊 Found votes:', votes.length)
-    return votes
+    console.log('📊 Total votes found for user', uid, 'on poll', pollId, ':', votes.length)
+    
+    // Double-check that all votes belong to the requested user
+    const validVotes = votes.filter(vote => vote.userUid === uid)
+    if (validVotes.length !== votes.length) {
+      console.warn('⚠️ Found votes that dont belong to requested user!')
+    }
+    
+    return validVotes
   } catch (error) {
     console.error('❌ Error getting user votes:', error)
     return []
@@ -363,4 +403,86 @@ export async function updateDataRequest(reqId: string, status: 'approved' | 'den
     respondedAt: serverTimestamp(),
     approverUid
   })
+}
+
+// SIMPLIFIED: Check if user has completed all questions using voters array in poll
+export async function hasUserCompletedPoll(userUid: string, pollId: string): Promise<boolean> {
+  try {
+    console.log('🔍 Checking if user has completed entire poll via voters array:', userUid, pollId)
+    
+    // Get the poll to check voters array and questions
+    const poll = await getPoll(pollId)
+    if (!poll || !poll.questions) {
+      console.log('❌ Poll not found or has no questions')
+      return false
+    }
+    
+    // Check if user is in voters array (they've voted at least once)
+    if (!poll.voters || !poll.voters.includes(userUid)) {
+      console.log('❌ User not found in voters array')
+      return false
+    }
+    
+    // Get detailed votes to check completion
+    const userVotes = await getUserVotesForPoll(userUid, pollId)
+    console.log('📊 User votes found:', userVotes.length, 'Poll questions:', poll.questions.length)
+    
+    // Check if user has voted on every question
+    const votedQuestionIds = new Set(userVotes.map(vote => vote.questionId))
+    const hasVotedOnAllQuestions = poll.questions.every(q => votedQuestionIds.has(q.id))
+    
+    console.log('🎯 Poll completion status:', {
+      totalQuestions: poll.questions.length,
+      votedQuestions: votedQuestionIds.size,
+      completed: hasVotedOnAllQuestions,
+      inVotersArray: poll.voters.includes(userUid)
+    })
+    
+    return hasVotedOnAllQuestions
+  } catch (error) {
+    console.error('❌ Error checking poll completion:', error)
+    return false
+  }
+}
+
+// SIMPLIFIED: Check if user already received points using user document
+export async function hasReceivedPollCompletionPoints(userUid: string, pollId: string): Promise<boolean> {
+  try {
+    const userDoc = await getDoc(doc(db, 'users', userUid))
+    if (!userDoc.exists()) {
+      console.log('❌ User document not found')
+      return false
+    }
+    
+    const userData = userDoc.data()
+    const completedPolls = userData.completedPolls || []
+    const hasCompleted = completedPolls.includes(pollId)
+    
+    console.log('🔍 Poll completion check for user', userUid, 'poll', pollId, '- Already completed:', hasCompleted)
+    return hasCompleted
+  } catch (error) {
+    console.error('❌ Error checking poll completion points:', error)
+    return false
+  }
+}
+
+// NEW: Check if user has voted on any question in a poll using voters array
+export async function hasUserVotedOnPoll(userUid: string, pollId: string): Promise<boolean> {
+  try {
+    console.log('🔍 Checking if user has voted on poll via voters array:', userUid, pollId)
+    
+    const poll = await getPoll(pollId)
+    if (!poll) {
+      console.log('❌ Poll not found')
+      return false
+    }
+    
+    const hasVoted = poll.voters && poll.voters.includes(userUid)
+    console.log('🗳️ User voting status:', hasVoted)
+    
+    return hasVoted
+  } catch (error) {
+    console.error('❌ Error checking user vote status:', error)
+    return false
+  }
 }

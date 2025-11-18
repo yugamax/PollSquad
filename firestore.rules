@@ -1,38 +1,37 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Polls collection - Public read access for authenticated users only
-    match /polls/{pollId} {
-      allow read: if request.auth != null; // Only authenticated users can read polls
-      allow write: if request.auth != null; // Only authenticated users can create/update
-    }
-    
-    // Users collection - Private to owner only
+    // Users can read their own user document AND authenticated users can read all users for admin purposes
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null; // Allow all authenticated users to read any user document
+      allow write: if request.auth != null && request.auth.uid == userId; // Only allow users to write their own data
     }
     
-    // Votes collection - Allow authenticated users to create and read their own votes
+    // Polls: Authenticated users can read all polls, only owners can write
+    // The voters array is now part of the poll document for efficient tracking
+    match /polls/{pollId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.ownerUid;
+      allow update: if request.auth != null && request.auth.uid == resource.data.ownerUid;
+      allow delete: if request.auth != null && request.auth.uid == resource.data.ownerUid;
+    }
+    
+    // Votes: Users can create and read their own votes
     match /votes/{voteId} {
       allow read: if request.auth != null && request.auth.uid == resource.data.userUid;
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userUid;
-      allow update, delete: if false; // Votes are immutable - no updates or deletions allowed
+      allow delete: if request.auth != null && request.auth.uid == resource.data.userUid;
+      allow update: if false; // Votes cannot be updated once created
     }
     
-    // Requests collection - Private to requester and poll owner
+    // Data Requests: Users can create requests, poll owners can read/update
     match /requests/{requestId} {
-      allow read: if request.auth != null && 
-        (request.auth.uid == resource.data.requesterUid || 
-         request.auth.uid == resource.data.approverUid);
+      allow read: if request.auth != null && (
+        request.auth.uid == resource.data.requesterUid || 
+        request.auth.uid == resource.data.pollOwnerUid
+      );
       allow create: if request.auth != null && request.auth.uid == request.resource.data.requesterUid;
-      allow update: if request.auth != null; // Allow approving/denying
-    }
-    
-    // Points log - Private to owner, allow creation for point awards
-    match /pointsLog/{logId} {
-      allow read: if request.auth != null && request.auth.uid == resource.data.userUid;
-      allow create: if request.auth != null; // Allow system to create point logs
-      allow update, delete: if false; // Point logs are immutable
+      allow update: if request.auth != null && request.auth.uid == resource.data.pollOwnerUid;
     }
   }
 }

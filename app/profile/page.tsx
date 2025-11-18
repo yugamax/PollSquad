@@ -3,11 +3,12 @@
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { ProfilePictureUpload } from '@/components/ui/profile-picture-upload'
 import { useAuth } from '@/lib/auth-context'
+import { getUserData } from '@/lib/db-service'
 import { useState, useEffect } from 'react'
 import { Save, AlertCircle, X } from 'lucide-react'
 
 export default function ProfilePage() {
-  const { user } = useAuth()
+  const { user, userPoints, refreshUserData } = useAuth()
   const [profile, setProfile] = useState({
     displayName: user?.displayName || '',
     bio: '',
@@ -20,6 +21,11 @@ export default function ProfilePage() {
   const [originalProfile, setOriginalProfile] = useState(profile)
   const [hasChanges, setHasChanges] = useState(false)
   const [showNotification, setShowNotification] = useState(false)
+  const [userStats, setUserStats] = useState({
+    pollsCreated: 0,
+    pollsCompleted: 0,
+    totalVotes: 0
+  })
 
   useEffect(() => {
     const initial = {
@@ -40,6 +46,39 @@ export default function ProfilePage() {
     setHasChanges(changed)
     setShowNotification(changed)
   }, [profile, originalProfile])
+
+  useEffect(() => {
+    // NEW: Load user statistics
+    const loadUserStats = async () => {
+      if (user) {
+        try {
+          const userData = await getUserData(user.uid)
+          if (userData) {
+            const completedPolls = userData.completedPolls?.length || 0
+            setUserStats(prev => ({
+              ...prev,
+              pollsCompleted: completedPolls
+            }))
+          }
+        } catch (error) {
+          console.error('Error loading user stats:', error)
+        }
+      }
+    }
+    
+    loadUserStats()
+  }, [user])
+
+  // Listen for points updates
+  useEffect(() => {
+    const handlePointsUpdate = () => {
+      console.log('🔄 Profile: Points update event received, refreshing...')
+      refreshUserData()
+    }
+
+    window.addEventListener('userPointsUpdated', handlePointsUpdate)
+    return () => window.removeEventListener('userPointsUpdated', handlePointsUpdate)
+  }, [refreshUserData])
 
   const handleSave = async () => {
     try {
@@ -219,15 +258,15 @@ export default function ProfilePage() {
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center p-4 bg-muted/50 rounded-xl">
-              <div className="text-3xl font-bold text-primary mb-1">0</div>
+              <div className="text-3xl font-bold text-primary mb-1">{userStats.pollsCreated}</div>
               <div className="text-sm text-muted-foreground">Polls Created</div>
             </div>
             <div className="text-center p-4 bg-muted/50 rounded-xl">
-              <div className="text-3xl font-bold text-accent mb-1">0</div>
-              <div className="text-sm text-muted-foreground">Votes Cast</div>
+              <div className="text-3xl font-bold text-accent mb-1">{userStats.pollsCompleted}</div>
+              <div className="text-sm text-muted-foreground">Polls Completed</div>
             </div>
             <div className="text-center p-4 bg-muted/50 rounded-xl">
-              <div className="text-3xl font-bold text-warning mb-1">234</div>
+              <div className="text-3xl font-bold text-warning mb-1">{userPoints}</div>
               <div className="text-sm text-muted-foreground">Points Earned</div>
             </div>
             <div className="text-center p-4 bg-muted/50 rounded-xl">

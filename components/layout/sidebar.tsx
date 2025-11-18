@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, forwardRef, useImperativeHandle } from 'react'
+import React, { useState, forwardRef, useImperativeHandle, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import {
   Menu as MenuIcon,
@@ -11,14 +11,18 @@ import {
   Moon,
   Sun,
   Home,
-  LogOut
+  LogOut,
+  User
 } from 'lucide-react'
 import { useTheme } from '@/lib/theme-context'
 import { useAuth } from '@/lib/auth-context'
 import { ProfilePictureUpload } from '@/components/ui/profile-picture-upload'
+import { fetchAllUsersJSON, downloadUsersAsJSON, UserDataJSON } from '../../lib/user-data-service'
+import Link from 'next/link'
 
 const menuItems = [
   { icon: Home, label: 'Home', href: '/dashboard' },
+  { icon: User, label: 'Profile Settings', href: '/profile' },
   { icon: Settings, label: 'Settings', href: '/settings' },
   { icon: Database, label: 'Dataset Collection', href: '/datasets' },
   { icon: Send, label: 'Requests', href: '/requests' },
@@ -35,7 +39,37 @@ export const Sidebar = forwardRef<{ toggleSidebar: () => void }, SidebarProps>(
     const router = useRouter()
     const pathname = usePathname()
     const { theme, toggleTheme } = useTheme()
-    const { user, signOut } = useAuth()
+    const { user, signOut, userPoints, refreshUserData } = useAuth()
+    const [displayPoints, setDisplayPoints] = useState(0)
+    const [showUserInfo, setShowUserInfo] = useState(false)
+    const [allUsers, setAllUsers] = useState<UserDataJSON[]>([])
+    const [loadingUsers, setLoadingUsers] = useState(false)
+
+    // Force refresh from database when component mounts
+    useEffect(() => {
+      if (user) {
+        console.log('🔄 Sidebar: Force refreshing points from database')
+        refreshUserData()
+      }
+    }, [user?.uid, refreshUserData])
+
+    // Listen for points updates
+    useEffect(() => {
+      const handlePointsUpdate = () => {
+        console.log('🔄 Sidebar: Points update event received, refreshing...')
+        refreshUserData()
+      }
+
+      if (typeof window !== 'undefined') {
+        window.addEventListener('userPointsUpdated', handlePointsUpdate)
+        return () => window.removeEventListener('userPointsUpdated', handlePointsUpdate)
+      }
+    }, [refreshUserData])
+
+    // Update display points when context points change
+    useEffect(() => {
+      setDisplayPoints(userPoints)
+    }, [userPoints])
 
     const handleSignOut = async () => {
       try {
@@ -67,6 +101,44 @@ export const Sidebar = forwardRef<{ toggleSidebar: () => void }, SidebarProps>(
     const handleNavigation = (href: string) => {
       router.push(href)
       closeSidebar()
+    }
+
+    // Fetch all users function
+    const handleFetchAllUsers = async () => {
+      setLoadingUsers(true)
+      try {
+        console.log('📥 Fetching all users from sidebar...')
+        const users = await fetchAllUsersJSON()
+        setAllUsers(users)
+        console.log(`✅ Fetched ${users.length} users successfully`)
+      } catch (error) {
+        console.error('❌ Error fetching users:', error)
+        
+        if (error.message?.includes('Permission denied')) {
+          alert('⚠️ Permission denied. You need to deploy updated Firestore rules to access user data.')
+        } else {
+          alert(`Failed to fetch users: ${error.message}`)
+        }
+      } finally {
+        setLoadingUsers(false)
+      }
+    }
+
+    // Download users as JSON
+    const handleDownloadUsers = () => {
+      if (allUsers.length === 0) {
+        alert('No users data to download. Fetch users first.')
+        return
+      }
+      downloadUsersAsJSON(allUsers, `users-export-${new Date().toISOString().split('T')[0]}.json`)
+    }
+
+    // Toggle user info section
+    const toggleUserInfo = () => {
+      setShowUserInfo(!showUserInfo)
+      if (!showUserInfo && allUsers.length === 0) {
+        handleFetchAllUsers()
+      }
     }
 
     return (
@@ -133,7 +205,10 @@ export const Sidebar = forwardRef<{ toggleSidebar: () => void }, SidebarProps>(
                   <h3 className="font-semibold text-foreground text-sm sm:text-base truncate">
                     {user?.displayName || user?.email?.split('@')[0] || 'User'}
                   </h3>
-                  <p className="text-xs text-muted-foreground">Member</p>
+                  <div className="flex items-center gap-1 text-xs text-warning">
+                    <span>⭐</span>
+                    <span className="font-bold">{displayPoints} points</span>
+                  </div>
                 </div>
               </div>
 
@@ -146,8 +221,8 @@ export const Sidebar = forwardRef<{ toggleSidebar: () => void }, SidebarProps>(
               </button>
             </div>
 
-            {/* Navigation */}
-            <nav className="p-4 sm:p-6 space-y-1 sm:space-y-2 overflow-y-auto">
+            {/* Navigation Menu */}
+            <nav className="flex-1 p-4 sm:p-6 space-y-3 overflow-y-auto">
               {menuItems.map((item) => {
                 const Icon = item.icon
                 const isActive = pathname === item.href
@@ -180,6 +255,19 @@ export const Sidebar = forwardRef<{ toggleSidebar: () => void }, SidebarProps>(
                 )}
                 <span className="font-medium">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
               </button>
+
+              {/* Admin Section - Check User Info */}
+              {user && (
+                <Link
+                  href="/admin/users"
+                  className="w-full flex items-center gap-3 sm:gap-4 px-4 py-3 sm:py-4 rounded-2xl transition-all group text-foreground hover:bg-primary/10 hover:text-primary"
+                >
+                  <span className="text-lg sm:text-xl">👥</span>
+                  <span className="font-bold text-sm sm:text-base">User Data Admin</span>
+                </Link>
+              )}
+
+              {/* ...existing code... */}
             </nav>
 
             {/* Footer actions (optional) */}

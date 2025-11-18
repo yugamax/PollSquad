@@ -5,7 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Clock, Users, TrendingUp, Vote, Lock, LogIn, ChevronRight, X, Star } from 'lucide-react'
 import { getFeedPolls, submitVote, getUserVotesForPoll } from '../../lib/db-service'
 import { useAuth } from '../../lib/auth-context'
-import { awardPoints, calculatePoints } from '../../lib/points-service'
+import { awardPoints, calculatePoints, awardPollCompletionPoints } from '../../lib/points-service'
+import { hasUserCompletedPoll, hasReceivedPollCompletionPoints, hasUserVotedOnPoll } from '../../lib/db-service'
+import { updateAllUserPointsTo40 } from '../../lib/admin-utils'
 
 // Match the actual Poll interface from db-service
 interface Poll {
@@ -36,7 +38,7 @@ interface PollFeedProps {
 }
 
 export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) {
-  const { user, loading: authLoading } = useAuth()
+  const { user, loading: authLoading, userPoints, refreshUserData } = useAuth()
   const [polls, setPolls] = useState<Poll[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -101,29 +103,79 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
   }
 
   const loadUserVotes = async (pollList: Poll[]) => {
-    if (!user) return
+    if (!user) {
+      console.log('🚫 No user, clearing votes')
+      setUserVotes({})
+      return
+    }
     
+    console.log('🔍 Loading votes for CURRENT USER using optimized approach:', user.uid, user.email)
     const votes: Record<string, Record<string, string[]>> = {}
     
-    for (const poll of pollList) {
-      if (poll.questions) {
-        votes[poll.pollId] = {}
-        for (const question of poll.questions) {
-          try {
-            const questionVotes = await getUserVotesForPoll(user.uid, poll.pollId)
-            const userQuestionVotes = questionVotes.filter(v => v.questionId === question.id)
+    try {
+      for (const poll of pollList) {
+        if (poll.questions) {
+          // First check if user has voted at all using voters array
+          const hasVotedOnPoll = await hasUserVotedOnPoll(user.uid, poll.pollId)
+          
+          if (!hasVotedOnPoll) {
+            console.log(`⚠️ User ${user.uid} not in voters array for poll ${poll.pollId}, skipping detailed check`)
+            continue
+          }
+          
+          votes[poll.pollId] = {}
+          console.log(`🗳️ User in voters array, checking detailed votes for poll: ${poll.pollId} (${poll.title})`)
+          
+          // Get detailed votes only if user is in voters array
+          const questionVotes = await getUserVotesForPoll(user.uid, poll.pollId)
+          console.log(`📊 Raw votes for user ${user.uid} on poll ${poll.pollId}:`, questionVotes)
+          
+          for (const question of poll.questions) {
+            // Filter to get votes for this specific question
+            const userQuestionVotes = questionVotes.filter(v => 
+              v.questionId === question.id && 
+              v.userUid === user.uid  // Extra safety check
+            )
+            
             if (userQuestionVotes.length > 0) {
               votes[poll.pollId][question.id] = userQuestionVotes[0].selectedOptions
+              console.log(`✅ User ${user.uid} HAS voted on poll ${poll.pollId}, question ${question.id}:`, userQuestionVotes[0].selectedOptions)
+            } else {
+              console.log(`❌ User ${user.uid} has NOT voted on poll ${poll.pollId}, question ${question.id}`)
             }
-          } catch (error) {
-            console.error('Error loading votes for question:', error)
           }
         }
       }
+    } catch (error) {
+      console.error('❌ PollFeed: Error in loadUserVotes:', error)
     }
     
+    console.log('📋 Final votes state for user', user.uid, ':', votes)
     setUserVotes(votes)
   }
+
+  // Clear votes when user changes and reload properly
+  useEffect(() => {
+    console.log('👤 User effect triggered, user:', user?.uid, user?.email)
+    
+    // Always clear votes first when user changes
+    setUserVotes({})
+    setSelectedOptions({})
+    setVotingLoading({})
+    
+    if (user && polls.length > 0) {
+      console.log('🔄 Reloading votes for new user')
+      loadUserVotes(polls)
+    }
+  }, [user?.uid]) // Only track uid for account changes
+
+  // Separate effect for when polls change
+  useEffect(() => {
+    if (user && polls.length > 0) {
+      console.log('📊 Polls changed, reloading votes')
+      loadUserVotes(polls)
+    }
+  }, [polls.length])
 
   const handleToggleOption = (pollId: string, questionId: string, optionId: string) => {
     if (!user || userVotes[pollId]?.[questionId]) return
@@ -140,32 +192,44 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
   }
 
   const handleSubmitVote = async (pollId: string, questionId: string) => {
-    if (!user || !selectedOptions[pollId]?.[questionId]?.length || userVotes[pollId]?.[questionId]) return
+    if (!user) {
+      console.log('❌ No user for voting')
+      return
+    }
+    
+    const selectedForQuestion = selectedOptions[pollId]?.[questionId]
+    if (!selectedForQuestion?.length) {
+      console.log('❌ No options selected')
+      return
+    }
+    
+    // Check if THIS USER has already voted
+    const hasAlreadyVoted = userVotes[pollId]?.[questionId]
+    if (hasAlreadyVoted) {
+      console.log('❌ Current user has already voted on this question:', hasAlreadyVoted)
+      return
+    }
+
+    console.log('🗳️ Attempting to submit vote for user:', user.uid)
 
     try {
       setVotingLoading(prev => ({ ...prev, [`${pollId}-${questionId}`]: true }))
       
-      const poll = polls.find(p => p.pollId === pollId)
-      const totalVotes = poll?.totalVotes || 0
-      const points = calculatePoints(totalVotes)
-      
-      // Submit vote
+      console.log('📝 Submitting vote to database...')
       await submitVote({
         pollId,
         questionId,
         userUid: user.uid,
-        selectedOptions: selectedOptions[pollId][questionId]
+        selectedOptions: selectedForQuestion
       })
+      console.log('✅ Vote submitted successfully')
 
-      // Award points
-      await awardPoints(user.uid, pollId, points)
-      
-      // Update local state
+      // Update local state immediately
       setUserVotes(prev => ({
         ...prev,
         [pollId]: {
           ...prev[pollId],
-          [questionId]: selectedOptions[pollId][questionId]
+          [questionId]: selectedForQuestion
         }
       }))
       
@@ -177,12 +241,55 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
         }
       }))
       
-      // Refresh polls to show updated vote counts
-      loadPolls()
+      // CRITICAL FIX: Only check for poll completion after a small delay to ensure all votes are processed
+      setTimeout(async () => {
+        console.log('🎯 Checking if poll is now fully completed...')
+        
+        // First check if they already got points for this poll
+        const alreadyRewarded = await hasReceivedPollCompletionPoints(user.uid, pollId)
+        
+        if (!alreadyRewarded) {
+          const hasCompleted = await hasUserCompletedPoll(user.uid, pollId)
+          
+          if (hasCompleted) {
+            console.log('🎉 User has completed the entire poll for the FIRST TIME!')
+            
+            console.log('🎁 Awarding poll completion points...')
+            const poll = polls.find(p => p.pollId === pollId)
+            const totalVotes = poll?.totalVotes || 0
+            
+            const pointsAwarded = await awardPollCompletionPoints(user.uid, pollId, totalVotes)
+            
+            console.log('✅ Poll completion points awarded:', pointsAwarded)
+            
+            // Show success message
+            if (pointsAwarded > 0) {
+              alert(`🎉 Poll completed! You earned ${pointsAwarded} points!`)
+            }
+          } else {
+            console.log('📊 Poll not yet fully completed by user')
+          }
+        } else {
+          console.log('⚠️ User already received points for completing this poll')
+        }
+      }, 500) // Small delay to ensure vote processing is complete
+      
+      // Refresh data
+      console.log('🔄 Refreshing polls after successful vote...')
+      await loadPolls()
       onRefresh?.()
       
     } catch (error) {
-      console.error('Error submitting vote:', error)
+      console.error('❌ Error submitting vote:', error)
+      
+      // Show specific error messages
+      if (error.message?.includes('already voted')) {
+        alert('You have already voted on this question.')
+      } else if (error.code === 'permission-denied') {
+        alert('Permission denied. Please sign out and sign in again.')
+      } else {
+        alert(`Failed to submit vote: ${error.message}`)
+      }
     } finally {
       setVotingLoading(prev => ({ ...prev, [`${pollId}-${questionId}`]: false }))
     }
@@ -204,6 +311,31 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
       loadPolls()
     }
   }, [user, authLoading])
+
+  // Add debug button for testing (temporary)
+  const forceRefreshPoints = async () => {
+    console.log('🔄 Force refresh points clicked')
+    await refreshUserData()
+  }
+
+  // Admin function to update all user points
+  const handleUpdateAllPoints = async () => {
+    if (!user) return
+    
+    const confirmed = confirm('Are you sure you want to update ALL users to 40 points? This cannot be undone.')
+    if (!confirmed) return
+    
+    try {
+      console.log('🔄 Starting admin operation: Update all users to 40 points')
+      const updatedCount = await updateAllUserPointsTo40()
+      alert(`✅ Successfully updated ${updatedCount} users to 40 points!`)
+      await refreshUserData() // Refresh current user's points
+      window.location.reload() // Force page refresh to see changes
+    } catch (error) {
+      console.error('❌ Error updating points:', error)
+      alert('❌ Failed to update points. Check console for details.')
+    }
+  }
 
   // Show loading while auth is being determined
   if (authLoading) {
@@ -306,9 +438,22 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
             {user && (
               <div className="flex items-center gap-2 text-sm bg-warning/10 text-warning px-3 py-2 rounded-full border border-warning/20">
                 <Star className="w-4 h-4" />
-                <span className="font-medium">+5 points per vote</span>
+                <span className="font-medium">+5 points per poll completed</span>
+                <span className="text-xs opacity-75">({userPoints} total)</span>
               </div>
             )}
+            
+            {/* Admin Controls */}
+            {user && (
+              <button 
+                onClick={handleUpdateAllPoints}
+                className="text-red-500 hover:text-red-600 hover:underline font-bold text-sm sm:text-base bg-red-50 px-3 py-1 rounded-lg border border-red-200"
+                title="Admin: Set all existing users to 40 points"
+              >
+                🔧 Set All Users to 40 Points
+              </button>
+            )}
+            
             <button 
               onClick={() => {
                 console.log('🔄 PollFeed: Refresh button clicked')
@@ -501,7 +646,7 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
                   <div className="flex items-center gap-2 text-warning">
                     <Star className="w-4 h-4" />
                     <span className="text-sm sm:text-base font-medium">
-                      Earn 5 points for each question you vote on
+                      Earn 5 points for completing this entire poll (answer all questions)
                     </span>
                   </div>
                 </div>
@@ -545,13 +690,15 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
                                       {!hasVoted && (
                                         <div className={`w-4 h-4 sm:w-5 sm:h-5 rounded border-2 transition-all flex-shrink-0 mt-0.5 sm:mt-0 ${
                                           isSelected ? 'bg-primary border-primary' : 'border-primary/30'
-                                        }`}>
-                                          {isSelected && <span className="text-white text-center text-xs leading-none">✓</span>}
+                                        } flex items-center justify-center`}>
+                                          {isSelected && (
+                                            <span className="text-white text-xs font-bold leading-none">✓</span>
+                                          )}
                                         </div>
                                       )}
                                       {userVotedForThis && (
                                         <div className="w-4 h-4 sm:w-5 sm:h-5 bg-success border-2 border-success rounded flex items-center justify-center flex-shrink-0 mt-0.5 sm:mt-0">
-                                          <span className="text-white text-xs leading-none">✓</span>
+                                          <span className="text-white text-xs font-bold leading-none">✓</span>
                                         </div>
                                       )}
                                       <span className={`text-sm sm:text-base font-medium ${

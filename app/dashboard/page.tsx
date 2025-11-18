@@ -4,9 +4,11 @@
 import { DashboardLayout } from '../../components/layout/dashboard-layout'
 import { PollFeed } from '../../components/poll/poll-feed'
 import { motion } from 'framer-motion'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
+import { useAuth } from '../../lib/auth-context'
 
 export default function DashboardPage() {
+  const { user, userPoints, refreshUserData } = useAuth()
   console.log('🚀 DASHBOARD COMPONENT LOADING - IMPORT PATHS FIXED!')
   console.log('🏠 Dashboard component rendered with original design')
   
@@ -16,6 +18,14 @@ export default function DashboardPage() {
     console.log('🔄 Dashboard: handlePollsRefresh called')
     setPollsUpdated(prev => prev + 1)
   }, [])
+
+  // Force refresh points when dashboard loads
+  useEffect(() => {
+    if (user) {
+      console.log('🔄 Dashboard: Force refreshing user points from database')
+      refreshUserData()
+    }
+  }, [user?.uid, refreshUserData])
 
   return (
     <DashboardLayout>

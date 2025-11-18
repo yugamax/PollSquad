@@ -4,7 +4,8 @@ import { motion } from 'framer-motion'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth-context'
 import { submitVote, getUserVotesForPoll } from '@/lib/db-service'
-import { awardPoints, calculatePoints } from '@/lib/points-service'
+import { awardPoints, calculatePoints, awardPollCompletionPoints } from '@/lib/points-service'
+import { hasUserCompletedPoll, hasReceivedPollCompletionPoints, hasUserVotedOnPoll } from '@/lib/db-service'
 import { BoostModal } from './boost-modal'
 import { ExportButton } from './export-button'
 import { RequestDataModal } from './request-data-modal'
@@ -56,7 +57,7 @@ export function PollCard({
   onRefresh,
   userPoints = 0
 }: PollCardProps) {
-  const { user } = useAuth()
+  const { user, refreshUserData } = useAuth()
   const [userVotes, setUserVotes] = useState<Record<string, string[]>>({})
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string[]>>({})
   const [loading, setLoading] = useState(false)
@@ -69,20 +70,43 @@ export function PollCard({
   useEffect(() => {
     const checkIfVoted = async () => {
       if (user && questions.length > 0) {
+        console.log('🔍 Checking votes for user using optimized approach:', user.uid, user.email)
+        
+        // First check if user has voted at all using voters array
+        const hasVotedOnPoll = await hasUserVotedOnPoll(user.uid, pollId)
+        
+        if (!hasVotedOnPoll) {
+          console.log(`⚠️ User ${user.uid} not in voters array for poll ${pollId}, no detailed check needed`)
+          setUserVotes({})
+          return
+        }
+        
+        console.log(`🗳️ User in voters array, checking detailed votes for poll: ${pollId}`)
+        
+        // Get detailed votes only if user is in voters array
         const votes: Record<string, string[]> = {}
+        const allVotes = await getUserVotesForPoll(user.uid, pollId)
+        
         for (const question of questions) {
-          const questionVotes = await getUserVotesForPoll(user.uid, pollId)
-          const userQuestionVotes = questionVotes.filter(v => v.questionId === question.id)
+          const userQuestionVotes = allVotes.filter(v => 
+            v.questionId === question.id && 
+            v.userUid === user.uid // Ensure votes belong to current user
+          )
           if (userQuestionVotes.length > 0) {
             votes[question.id] = userQuestionVotes[0].selectedOptions
+            console.log(`✅ User ${user.uid} has voted on question ${question.id}`)
           }
         }
         setUserVotes(votes)
+      } else {
+        // Clear votes when no user
+        setUserVotes({})
+        setSelectedOptions({})
       }
     }
     
     checkIfVoted()
-  }, [user, pollId, questions])
+  }, [user?.uid, pollId, questions]) // Track user.uid for account changes
 
   const handleToggleOption = (questionId: string, optionId: string) => {
     if (userVotes[questionId] || isOwner || !user) return
@@ -100,7 +124,6 @@ export function PollCard({
 
     try {
       setLoading(true)
-      const points = calculatePoints(totalVotes)
       
       await submitVote({
         pollId,
@@ -109,16 +132,38 @@ export function PollCard({
         selectedOptions: selectedOptions[questionId]
       })
 
-      await awardPoints(user.uid, pollId, points)
-      
       setUserVotes(prev => ({ ...prev, [questionId]: selectedOptions[questionId] }))
       setSelectedOptions(prev => ({ ...prev, [questionId]: [] }))
-      setPointsEarned(points)
-      setShowPointsAnimation(true)
+      
+      // CRITICAL FIX: Only check for poll completion after a small delay
+      setTimeout(async () => {
+        console.log('🎯 Checking if poll is now fully completed...')
+        
+        // First check if they already got points for this poll
+        const alreadyRewarded = await hasReceivedPollCompletionPoints(user.uid, pollId)
+        
+        if (!alreadyRewarded) {
+          const hasCompleted = await hasUserCompletedPoll(user.uid, pollId)
+          
+          if (hasCompleted) {
+            console.log('🎉 User has completed the entire poll for the FIRST TIME!')
+            
+            console.log('🎁 Awarding poll completion points...')
+            const pointsAwarded = await awardPollCompletionPoints(user.uid, pollId, totalVotes)
+            
+            setPointsEarned(pointsAwarded)
+            setShowPointsAnimation(true)
+            setTimeout(() => setShowPointsAnimation(false), 2000)
+            
+            console.log('✅ Poll completion points awarded:', pointsAwarded)
+          }
+        } else {
+          console.log('⚠️ User already received points for completing this poll')
+        }
+      }, 500) // Small delay to ensure vote processing is complete
       
       onRefresh?.()
       
-      setTimeout(() => setShowPointsAnimation(false), 2000)
     } catch (error) {
       console.error('Error submitting vote:', error)
     } finally {
@@ -243,15 +288,15 @@ export function PollCard({
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
                           {user && !hasVotedThisQuestion && !isOwner && (
-                            <div className={`w-4 h-4 rounded border-2 transition-all ${
+                            <div className={`w-4 h-4 rounded border-2 transition-all flex items-center justify-center ${
                               isSelected ? 'bg-primary border-primary' : 'border-primary/30 group-hover:border-primary'
                             }`}>
-                              {isSelected && <span className="text-white text-center text-xs">✓</span>}
+                              {isSelected && <span className="text-white text-xs font-bold">✓</span>}
                             </div>
                           )}
                           {userVoted && (
                             <div className="w-4 h-4 bg-success border-2 border-success rounded flex items-center justify-center">
-                              <span className="text-white text-xs">✓</span>
+                              <span className="text-white text-xs font-bold">✓</span>
                             </div>
                           )}
                           <span className={`font-medium text-sm ${

@@ -4,51 +4,137 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { 
   User, 
   signOut as firebaseSignOut,
-  onAuthStateChanged 
+  onAuthStateChanged, 
+  signInWithPopup, 
+  GoogleAuthProvider
 } from 'firebase/auth'
 import { auth } from './firebase'
 import { createUserData, getUserData } from './db-service'
 
 interface AuthContextType {
   user: User | null
+  userPoints: number // NEW: Add user points to context
   loading: boolean
-  initializing: boolean
+  signInWithGoogle: () => Promise<void>
   signOut: () => Promise<void>
+  refreshUserData: () => Promise<void> // NEW: Function to refresh user data
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
+  const [userPoints, setUserPoints] = useState<number>(0) // NEW: Track user points
   const [loading, setLoading] = useState(true)
-  const [initializing, setInitializing] = useState(true)
 
-  console.log('🔐 AuthProvider render, user:', user?.email || 'none', 'loading:', loading)
+  // NEW: Add missing signInWithGoogle function
+  const signInWithGoogle = async () => {
+    try {
+      const provider = new GoogleAuthProvider()
+      const result = await signInWithPopup(auth, provider)
+      console.log('🔐 Google sign-in successful:', result.user.uid)
+    } catch (error) {
+      console.error('Google sign-in error:', error)
+      throw error
+    }
+  }
+
+  // NEW: Add missing signOut function
+  const signOut = async () => {
+    try {
+      await firebaseSignOut(auth)
+      console.log('🔓 Sign out successful')
+    } catch (error) {
+      console.error('Sign out error:', error)
+      throw error
+    }
+  }
+
+  // NEW: Function to refresh user data from database
+  const refreshUserData = async () => {
+    if (user) {
+      try {
+        console.log('🔄 Refreshing user data from database for:', user.uid)
+        const userData = await getUserData(user.uid)
+        if (userData) {
+          const dbPoints = userData.points || 0
+          setUserPoints(dbPoints)
+          console.log('✅ User points refreshed from database:', dbPoints)
+          
+          // Clear any browser cache
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('userPoints')
+            sessionStorage.removeItem('userPoints')
+          }
+        } else {
+          console.log('⚠️ No user data found in database')
+          setUserPoints(0)
+        }
+      } catch (error) {
+        console.error('❌ Error refreshing user data:', error)
+        setUserPoints(0)
+      }
+    } else {
+      setUserPoints(0)
+    }
+  }
 
   useEffect(() => {
     console.log('🔐 AuthProvider useEffect - setting up auth listener')
     
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      console.log('🔐 Auth state changed:', user?.email || 'signed out')
-      setUser(user)
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      console.log('🔐 Auth state changed:', firebaseUser?.email || 'signed out')
+      setUser(firebaseUser)
       
       // Create user document if it's their first time
-      if (user) {
+      if (firebaseUser) {
+        console.log('🔐 User signed in:', firebaseUser.uid)
+        
         try {
-          const existingUser = await getUserData(user.uid)
-          if (!existingUser) {
-            await createUserData(user.uid, {
-              displayName: user.displayName,
-              email: user.email,
-              photoURL: user.photoURL,
+          // ALWAYS fetch fresh data from database
+          let userData = await getUserData(firebaseUser.uid)
+          
+          if (!userData) {
+            console.log('👤 Creating new user document')
+            await createUserData(firebaseUser.uid, {
+              displayName: firebaseUser.displayName,
+              email: firebaseUser.email,
+              photoURL: firebaseUser.photoURL
             })
+            userData = await getUserData(firebaseUser.uid)
           }
+          
+          const userWithId: User = {
+            uid: firebaseUser.uid,
+            displayName: firebaseUser.displayName || '',
+            email: firebaseUser.email || '',
+            photoURL: firebaseUser.photoURL,
+            ...userData
+          }
+          
+          setUser(userWithId)
+          
+          // FORCE database points, ignore any cached values
+          const dbPoints = userData?.points || 0
+          setUserPoints(dbPoints)
+          console.log('📊 FORCED User points from database:', dbPoints)
+          
+          // Clear browser storage
+          if (typeof window !== 'undefined') {
+            localStorage.clear()
+            sessionStorage.clear()
+          }
+          
         } catch (error) {
-          console.error('Error handling user creation:', error)
+          console.error('Error setting up user:', error)
+          setUser(null)
+          setUserPoints(0)
         }
+      } else {
+        console.log('🔓 User signed out')
+        setUser(null)
+        setUserPoints(0)
       }
-      
-      setInitializing(false)
       setLoading(false)
     })
 
@@ -58,20 +144,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  const signOut = async () => {
-    try {
-      setLoading(true)
-      await firebaseSignOut(auth)
-    } catch (error) {
-      console.error('Error signing out:', error)
-      throw error
-    } finally {
-      setLoading(false)
+  // Listen for points update events
+  useEffect(() => {
+    const handlePointsUpdate = () => {
+      console.log('🔄 Auth context: Points update event received, refreshing...')
+      refreshUserData()
     }
+
+    const handleAllPointsUpdate = () => {
+      console.log('🔄 Auth context: All users points updated, refreshing...')
+      refreshUserData()
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('userPointsUpdated', handlePointsUpdate)
+      window.addEventListener('allUserPointsUpdated', handleAllPointsUpdate)
+      
+      return () => {
+        window.removeEventListener('userPointsUpdated', handlePointsUpdate)
+        window.removeEventListener('allUserPointsUpdated', handleAllPointsUpdate)
+      }
+    }
+  }, [user])
+
+  // Clear any cached data when user signs in
+  useEffect(() => {
+    if (user) {
+      // Clear any localStorage cached points
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('userPoints')
+        sessionStorage.removeItem('userPoints')
+      }
+    }
+  }, [user?.uid])
+
+  const contextValue: AuthContextType = {
+    user,
+    userPoints, // NEW: Expose user points
+    loading,
+    signInWithGoogle,
+    signOut,
+    refreshUserData // NEW: Expose refresh function
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, initializing, signOut }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   )
