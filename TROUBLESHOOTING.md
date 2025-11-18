@@ -556,38 +556,6 @@ Create a minimal test poll:
 3. Check browser extensions
 4. Try different browser
 
-## 🐛 COMMON ERROR MESSAGES
-
-### "Function addDoc() called with invalid data. Unsupported field value: undefined"
-**Fix:** Update your createPoll function to filter undefined values:
-```javascript
-const pollData = {
-  title: poll.title,
-  ...(poll.description && { description: poll.description }),
-  ...(poll.ownerImage && { ownerImage: poll.ownerImage })
-}
-```
-
-### "getFeedPolls returns empty array"
-**Causes:**
-1. No polls have `visible: true`
-2. Polls have old `options` format instead of `questions`
-3. Firestore security rules blocking read access
-4. JavaScript errors in poll processing
-
-**Fix:** Check browser console for specific error messages
-
-### "Polls created but dashboard shows 'No polls available'"
-**Causes:**
-1. Frontend not refreshing after poll creation
-2. Poll data format mismatch
-3. React state not updating
-
-**Fix:**
-1. Hard refresh (Ctrl+F5)
-2. Check console logs for getFeedPolls errors
-3. Use "Force Refresh" button in dev mode
-
 ## 🔧 DEBUGGING COMMANDS
 
 ### Check if polls exist in Firestore
@@ -784,3 +752,36 @@ To avoid future issues:
 // Run in browser console
 window.location.href = '/dashboard'
 ```
+
+## 🔧 **NEW FEATURE: My Polls Page**
+
+### **Feature Overview:**
+Added "My Polls" section accessible from the sidebar that shows polls created by the current user.
+
+### **Expected Functionality:**
+1. **Sidebar Navigation** - "My Polls" item appears between "Home" and "Profile Settings"
+2. **Poll Listing** - Shows all polls created by the authenticated user
+3. **Poll Statistics** - Displays vote counts, question counts, and creation dates
+4. **Quick Actions** - "View Poll" and "View Results" buttons for each poll
+5. **Empty State** - Helpful message and "Create Poll" button when no polls exist
+
+### **Troubleshooting My Polls:**
+
+**Issue: "My Polls" page shows empty state despite having created polls**
+**Solution:**
+1. Check if `getUserPolls()` function is working properly
+2. Verify user authentication is working correctly
+3. Check browser console for any errors in poll fetching
+4. Ensure polls have correct `ownerUid` field matching current user
+
+**Issue: "My Polls" navigation item not visible in sidebar**
+**Solution:**
+1. Ensure you're signed in (My Polls only shows for authenticated users)
+2. Check that sidebar component has been updated with new navigation item
+3. Restart development server after updating sidebar
+
+**Issue: Poll statistics showing incorrect data**
+**Solution:**
+1. Verify poll data structure in Firestore matches expected format
+2. Check that vote counts are being calculated correctly
+3. Ensure `totalVotes` field is properly updated when users vote

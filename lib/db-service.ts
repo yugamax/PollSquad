@@ -357,15 +357,58 @@ export async function getFeedPolls() {
 
 export async function getUserPolls(uid: string) {
   try {
+    console.log('🔍 Getting user polls for:', uid)
+    
+    // FIXED: Use simpler query without orderBy to avoid index requirements initially
     const constraints: QueryConstraint[] = [
-      where('ownerUid', '==', uid),
-      orderBy('createdAt', 'desc'),
-      limit(100)
+      where('ownerUid', '==', uid)
     ]
     
-    return getPolls(constraints)
+    const q = query(collection(db, 'polls'), ...constraints)
+    const querySnapshot = await getDocs(q)
+    
+    const polls = querySnapshot.docs.map(doc => ({
+      ...doc.data(),
+      pollId: doc.id,
+      createdAt: doc.data().createdAt?.toDate(),
+      boostedUntil: doc.data().boostedUntil?.toDate(),
+      expiresAt: doc.data().expiresAt?.toDate()
+    })) as Poll[]
+    
+    // Sort in JavaScript instead of Firestore to avoid index requirement
+    polls.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    
+    console.log(`✅ Found ${polls.length} polls for user ${uid}`)
+    return polls.slice(0, 100) // Limit to 100 most recent
+    
   } catch (error) {
-    console.error('Error fetching user polls:', error)
+    console.error('❌ Error fetching user polls:', error)
+    
+    if (error.code === 'failed-precondition' && error.message.includes('index')) {
+      console.error('🔥 Firestore index required. Please run: firebase deploy --only firestore:indexes')
+      
+      // Fallback: try without ordering
+      try {
+        const simpleQuery = query(collection(db, 'polls'), where('ownerUid', '==', uid))
+        const snapshot = await getDocs(simpleQuery)
+        const polls = snapshot.docs.map(doc => ({
+          ...doc.data(),
+          pollId: doc.id,
+          createdAt: doc.data().createdAt?.toDate(),
+          boostedUntil: doc.data().boostedUntil?.toDate(),
+          expiresAt: doc.data().expiresAt?.toDate()
+        })) as Poll[]
+        
+        // Sort in JavaScript
+        polls.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        return polls.slice(0, 100)
+        
+      } catch (fallbackError) {
+        console.error('❌ Fallback query also failed:', fallbackError)
+        return []
+      }
+    }
+    
     return []
   }
 }

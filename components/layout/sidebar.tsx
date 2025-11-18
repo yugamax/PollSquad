@@ -12,7 +12,10 @@ import {
   Sun,
   Home,
   LogOut,
-  User
+  User,
+  BarChart3,
+  FileText,
+  Users
 } from 'lucide-react'
 import { useTheme } from '@/lib/theme-context'
 import { useAuth } from '@/lib/auth-context'
@@ -26,6 +29,41 @@ const menuItems = [
   { icon: Settings, label: 'Settings', href: '/settings' },
   { icon: Database, label: 'Dataset Collection', href: '/datasets' },
   { icon: Send, label: 'Requests', href: '/requests' },
+]
+
+const navigation = [
+  { 
+    name: 'Home', 
+    href: '/dashboard', 
+    icon: Home, 
+    iconColor: 'text-primary',
+    bgColor: 'bg-primary/30 hover:bg-primary/40',
+    description: 'View community polls'
+  },
+  { 
+    name: 'My Polls', 
+    href: '/my-polls', 
+    icon: BarChart3, 
+    iconColor: 'text-accent',
+    bgColor: 'bg-accent/30 hover:bg-accent/40',
+    description: 'Manage your polls'
+  },
+  { 
+    name: 'Profile Settings', 
+    href: '/profile', 
+    icon: User, 
+    iconColor: 'text-success',
+    bgColor: 'bg-success/30 hover:bg-success/40',
+    description: 'Edit your profile'
+  },
+  { 
+    name: 'Settings', 
+    href: '/settings', 
+    icon: Settings, 
+    iconColor: 'text-muted-foreground',
+    bgColor: 'bg-muted/40 hover:bg-muted/50',
+    description: 'App preferences'
+  },
 ]
 
 interface SidebarProps {
@@ -230,24 +268,43 @@ export const Sidebar = forwardRef<{ toggleSidebar: () => void }, SidebarProps>(
             </div>
 
             {/* Navigation Menu */}
-            <nav className="flex-1 p-4 sm:p-6 space-y-3 overflow-y-auto">
-              {menuItems.map((item) => {
-                const Icon = item.icon
+            <nav className="flex-1 px-4 pb-4 space-y-2">
+              {navigation.map((item) => {
                 const isActive = pathname === item.href
                 return (
-                  <button
-                    key={item.href}
-                    onClick={() => handleNavigation(item.href)}
-                    className={`
-                      w-full flex items-center gap-3 px-3 py-2 sm:px-4 sm:py-3 rounded-xl text-left transition-all
-                      ${isActive 
-                        ? 'bg-primary text-white shadow-lg' 
-                        : 'text-foreground hover:bg-card/50'}
-                    `}
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`group flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all relative ${
+                      isActive
+                        ? `${item.bgColor.replace('hover:', '').replace('/30', '/40')} ${item.iconColor} shadow-lg border border-white/10`
+                        : `text-foreground hover:text-foreground ${item.bgColor} hover:shadow-md`
+                    }`}
+                    onClick={() => setIsOpen(false)}
                   >
-                    <Icon className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" />
-                    <span className="font-medium truncate">{item.label}</span>
-                  </button>
+                    <item.icon 
+                      className={`mr-3 flex-shrink-0 h-5 w-5 transition-colors ${
+                        isActive ? item.iconColor : 'group-hover:' + item.iconColor
+                      }`} 
+                    />
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className={`font-semibold text-sm ${
+                        isActive ? 'text-foreground' : 'text-foreground group-hover:text-foreground'
+                      }`}>
+                        {item.name}
+                      </div>
+                      <div className={`text-xs mt-0.5 ${
+                        isActive ? 'text-foreground/80' : 'text-foreground/70 group-hover:text-foreground/80'
+                      }`}>
+                        {item.description}
+                      </div>
+                    </div>
+                    
+                    {isActive && (
+                      <div className={`w-2 h-2 rounded-full ${item.iconColor.replace('text-', 'bg-')} ml-2`} />
+                    )}
+                  </Link>
                 )
               })}
 

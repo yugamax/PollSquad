@@ -99,12 +99,16 @@ pollsquad/
 │   ├── page.tsx                 # Root page (redirects to dashboard)
 │   ├── dashboard/
 │   │   └── page.tsx             # Main dashboard ✅ FIXED
+│   ├── my-polls/
+│   │   └── page.tsx             # User's created polls ✅ NEW
 │   ├── create-poll/
 │   │   └── page.tsx             # Poll creation form
 │   ├── requests/
 │   │   └── page.tsx             # Data requests management
 │   ├── settings/
 │   │   └── page.tsx             # User settings
+│   ├── profile/
+│   │   └── page.tsx             # Profile settings ✅ NEW
 │   ├── datasets/
 │   │   └── page.tsx             # Dataset downloads
 │   ├── layout.tsx               # Root layout with providers
@@ -115,7 +119,7 @@ pollsquad/
 │   │   └── login-page.tsx       # Login page component
 │   ├── layout/
 │   │   ├── header.tsx           # Top navigation
-│   │   ├── sidebar.tsx          # Side navigation
+│   │   ├── sidebar.tsx          # Side navigation ✅ UPDATED
 │   │   └── dashboard-layout.tsx # Dashboard wrapper with auth
 │   ├── poll/
 │   │   ├── poll-card.tsx        # Poll display & voting
