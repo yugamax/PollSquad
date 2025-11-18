@@ -279,6 +279,30 @@
     }
   }
 
+  /* Custom breakpoint for very small screens */
+  @screen xs {
+    /* This will be handled by Tailwind's responsive variants */
+  }
+
+  /* Mobile-first improvements */
+  @media (max-width: 475px) {
+    .xs\:grid-cols-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    
+    .xs\:max-w-2xl {
+      max-width: 28rem;
+    }
+    
+    .xs\:inline {
+      display: inline;
+    }
+    
+    .xs\:hidden {
+      display: none;
+    }
+  }
+
   /* Improve mobile poll list spacing */
   @media (max-width: 640px) {
     .mobile-poll-compact {
