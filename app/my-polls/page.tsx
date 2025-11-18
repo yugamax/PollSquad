@@ -6,7 +6,7 @@ import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { useAuth } from '@/lib/auth-context'
 import { getUserPolls, deletePollWithCleanup } from '@/lib/db-service'
 import { BoostModal } from '@/components/poll/boost-modal'
-import { ExportButton } from '@/components/poll/export-button'
+import { ExportModal } from '@/components/poll/export-modal'
 import { 
   Trash2, 
   Users, 
@@ -14,7 +14,8 @@ import {
   BarChart3, 
   Rocket,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Download
 } from 'lucide-react'
 
 interface Poll {
@@ -48,6 +49,10 @@ export default function MyPollsPage() {
   const [boostModal, setBoostModal] = useState<{ isOpen: boolean; pollId: string | null }>({
     isOpen: false,
     pollId: null
+  })
+  const [exportModal, setExportModal] = useState<{ isOpen: boolean; poll: Poll | null }>({
+    isOpen: false,
+    poll: null
   })
 
   const loadUserPolls = async () => {
@@ -96,6 +101,14 @@ export default function MyPollsPage() {
 
   const handleBoostClose = () => {
     setBoostModal({ isOpen: false, pollId: null })
+  }
+
+  const handleExportClick = (poll: Poll) => {
+    setExportModal({ isOpen: true, poll })
+  }
+
+  const handleExportClose = () => {
+    setExportModal({ isOpen: false, poll: null })
   }
 
   // Helper function to calculate remaining boost time
@@ -259,8 +272,14 @@ export default function MyPollsPage() {
                         </div>
                       )}
 
-                      {/* Export Button */}
-                      <ExportButton poll={poll} />
+                      {/* Export Button - Enhanced Design */}
+                      <button
+                        onClick={() => handleExportClick(poll)}
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg font-semibold text-sm transition-all hover:scale-105 bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30"
+                      >
+                        <Download className="w-4 h-4" />
+                        <span>Export Data</span>
+                      </button>
 
                       {/* Delete Button */}
                       <button
@@ -303,6 +322,15 @@ export default function MyPollsPage() {
               )
             })}
           </div>
+        )}
+
+        {/* Export Modal */}
+        {exportModal.poll && (
+          <ExportModal
+            isOpen={exportModal.isOpen}
+            poll={exportModal.poll}
+            onClose={handleExportClose}
+          />
         )}
 
         {/* Boost Modal */}

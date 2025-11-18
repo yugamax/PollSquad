@@ -150,7 +150,6 @@ export function PollCard({
           if (hasCompleted) {
             console.log('🎉 User has completed the entire poll for the FIRST TIME!')
             
-            console.log('🎁 Awarding poll completion points...')
             const pointsAwarded = await awardPollCompletionPoints(user.uid, pollId, totalVotes)
             
             setPointsEarned(pointsAwarded)
@@ -158,7 +157,7 @@ export function PollCard({
             setTimeout(() => setShowPointsAnimation(false), 2000)
             
             console.log('✅ Poll completion points awarded:', pointsAwarded)
-            // REMOVED: No alert message, points shown through animation
+            // REMOVED: No alert - points shown through animation
           }
         } else {
           console.log('⚠️ User already received points for completing this poll')
@@ -209,7 +208,7 @@ export function PollCard({
           setTimeout(() => setShowPointsAnimation(false), 2000)
           
           console.log('✅ Poll completion points awarded:', pointsAwarded)
-          // REMOVED: No alert message, points shown through animation
+          // REMOVED: No alert - points shown through animation
           
           onRefresh?.()
         }

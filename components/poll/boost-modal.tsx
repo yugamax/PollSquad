@@ -75,7 +75,7 @@ export function BoostModal({ isOpen, pollId, onClose, onSuccess }: BoostModalPro
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -88,33 +88,33 @@ export function BoostModal({ isOpen, pollId, onClose, onSuccess }: BoostModalPro
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="bg-card rounded-2xl p-6 w-full max-w-md border border-border shadow-2xl relative z-50"
+            className="bg-card rounded-xl sm:rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-md lg:max-w-lg max-h-[90vh] sm:max-h-[85vh] border border-border shadow-2xl relative z-50 overflow-y-auto"
           >
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-foreground">🚀 Boost Poll</h2>
-              <div className="flex items-center gap-2 bg-warning/10 text-warning px-3 py-2 rounded-full">
-                <span className="text-sm">⭐</span>
-                <span className="font-bold">{userPoints}</span>
+            <div className="flex justify-between items-center mb-4 sm:mb-6">
+              <h2 className="text-xl sm:text-2xl font-bold text-foreground">🚀 Boost Poll</h2>
+              <div className="flex items-center gap-1 sm:gap-2 bg-warning/10 text-warning px-2 sm:px-3 py-1.5 sm:py-2 rounded-full">
+                <span className="text-xs sm:text-sm">⭐</span>
+                <span className="font-bold text-sm sm:text-base">{userPoints}</span>
                 <span className="text-xs">points</span>
               </div>
             </div>
 
-            <p className="text-muted-foreground mb-6">Push your poll to the top and get more visibility!</p>
+            <p className="text-muted-foreground mb-4 sm:mb-6 text-sm sm:text-base">Push your poll to the top and get more visibility!</p>
 
             {/* Duration Options */}
-            <div className="space-y-3 mb-8">
+            <div className="space-y-2 sm:space-y-3 mb-6 sm:mb-8">
               {BOOST_DURATIONS.map(duration => (
                 <button
                   key={duration.hours}
                   onClick={() => setSelectedDuration(duration)}
-                  className={`w-full p-4 rounded-2xl border-2 transition-all flex items-center justify-between font-bold ${
+                  className={`w-full p-3 sm:p-4 rounded-xl sm:rounded-2xl border-2 transition-all flex items-center justify-between font-bold text-sm sm:text-base ${
                     selectedDuration.hours === duration.hours
                       ? 'bg-warning/20 border-warning shadow-lg'
                       : 'border-border hover:border-warning'
                   }`}
                 >
                   <div className="text-left">
-                    <div className="text-lg">
+                    <div className="text-sm sm:text-lg">
                       {duration.hours === 6 && '🕐 6 Hours'}
                       {duration.hours === 24 && '📅 24 Hours'}
                       {duration.hours === 72 && '🗓️ 3 Days'}
@@ -123,7 +123,7 @@ export function BoostModal({ isOpen, pollId, onClose, onSuccess }: BoostModalPro
                       {duration.hours === 24 ? 'Most popular choice' : 'Great visibility'}
                     </div>
                   </div>
-                  <div className="text-xl font-black text-primary">
+                  <div className="text-lg sm:text-xl font-black text-primary">
                     {duration.cost}
                   </div>
                 </button>
@@ -131,18 +131,18 @@ export function BoostModal({ isOpen, pollId, onClose, onSuccess }: BoostModalPro
             </div>
 
             {/* Cost Summary */}
-            <div className="bg-primary/5 rounded-2xl p-4 mb-6 border border-primary/20">
-              <div className="flex justify-between items-center mb-2">
+            <div className="bg-primary/5 rounded-xl sm:rounded-2xl p-3 sm:p-4 mb-4 sm:mb-6 border border-primary/20">
+              <div className="flex justify-between items-center mb-2 text-sm sm:text-base">
                 <span className="font-bold">Your Points</span>
                 <span className={userPoints >= selectedDuration.cost ? 'text-success font-bold' : 'text-danger font-bold'}>
                   {userPoints} pts
                 </span>
               </div>
-              <div className="flex justify-between items-center mb-2">
+              <div className="flex justify-between items-center mb-2 text-sm sm:text-base">
                 <span className="font-bold">Boost Cost</span>
                 <span className="text-primary font-black">-{selectedDuration.cost} pts</span>
               </div>
-              <div className="border-t border-primary/20 pt-2 flex justify-between items-center">
+              <div className="border-t border-primary/20 pt-2 flex justify-between items-center text-sm sm:text-base">
                 <span className="font-bold">After Boost</span>
                 <span className={`font-black ${userPoints >= selectedDuration.cost ? 'text-success' : 'text-danger'}`}>
                   {userPoints - selectedDuration.cost} pts
@@ -151,27 +151,27 @@ export function BoostModal({ isOpen, pollId, onClose, onSuccess }: BoostModalPro
             </div>
 
             {!canAfford && (
-              <div className="bg-danger/10 border border-danger/30 rounded-2xl p-3 mb-6 text-danger text-sm font-bold">
+              <div className="bg-danger/10 border border-danger/30 rounded-xl sm:rounded-2xl p-3 mb-4 sm:mb-6 text-danger text-xs sm:text-sm font-bold">
                 ❌ You need {selectedDuration.cost - userPoints} more points to boost this poll
               </div>
             )}
 
             {/* Actions */}
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={onClose}
-                className="flex-1 px-4 py-3 rounded-2xl border-2 border-primary font-bold transition-all hover:bg-primary/5"
+                className="flex-1 px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border-2 border-primary font-bold transition-all hover:bg-primary/5 text-sm sm:text-base"
               >
                 Cancel
               </button>
               <button
                 onClick={handleBoost}
                 disabled={loading || !canAfford}
-                className="flex-1 px-4 py-3 bg-warning text-black rounded-2xl font-bold transition-all disabled:opacity-50 hover:bg-warning/90"
+                className="flex-1 px-4 py-2.5 sm:py-3 bg-warning text-black rounded-xl sm:rounded-2xl font-bold transition-all disabled:opacity-50 hover:bg-warning/90 text-sm sm:text-base"
               >
                 {loading ? (
                   <div className="flex items-center justify-center gap-2">
-                    <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                    <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
                     Boosting...
                   </div>
                 ) : (

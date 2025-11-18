@@ -753,35 +753,30 @@ To avoid future issues:
 window.location.href = '/dashboard'
 ```
 
-## 🔧 **NEW FEATURE: My Polls Page**
+## 🔧 **RECENT FIXES: Sign-In Modal & Profile Features**
 
-### **Feature Overview:**
-Added "My Polls" section accessible from the sidebar that shows polls created by the current user.
+### **Issues Resolved:**
+- ✅ **Sign-In Modal Fixed** - Removed GitHub option and fixed `handleSignIn is not defined` error
+- ✅ **Google Sign-In Only** - Simplified authentication to use only Google OAuth
+- ✅ **Profile Viewing Added** - Users can click profile pictures to view other users' profiles
+- ✅ **College Information** - Display college names in polls when users make profiles visible
+- ✅ **Modal Dimensions** - All popup windows now have responsive dimensions for mobile and desktop
 
-### **Expected Functionality:**
-1. **Sidebar Navigation** - "My Polls" item appears between "Home" and "Profile Settings"
-2. **Poll Listing** - Shows all polls created by the authenticated user
-3. **Poll Statistics** - Displays vote counts, question counts, and creation dates
-4. **Quick Actions** - "View Poll" and "View Results" buttons for each poll
-5. **Empty State** - Helpful message and "Create Poll" button when no polls exist
+### **Sign-In System Changes:**
+- **Single Provider**: Now only uses Google Sign-In for simplicity and reliability
+- **Error Handling**: Proper error messages and loading states in sign-in modal
+- **Function Names**: Fixed `handleSignIn` reference error by using correct `handleGoogleSignIn`
+- **Responsive Design**: Sign-in modal works perfectly on both mobile and desktop
 
-### **Troubleshooting My Polls:**
+### **Profile Features Added:**
+- **Clickable Profiles**: Click any profile picture in polls to view user's public profile
+- **College Display**: Shows college name under username if user has set profile as visible
+- **Privacy Controls**: Users can control whether their profile information is public
+- **Public Profile Page**: `/profile/[uid]` route for viewing other users' profiles
+- **Profile Statistics**: Shows polls created, votes received, points earned, and polls completed
 
-**Issue: "My Polls" page shows empty state despite having created polls**
-**Solution:**
-1. Check if `getUserPolls()` function is working properly
-2. Verify user authentication is working correctly
-3. Check browser console for any errors in poll fetching
-4. Ensure polls have correct `ownerUid` field matching current user
-
-**Issue: "My Polls" navigation item not visible in sidebar**
-**Solution:**
-1. Ensure you're signed in (My Polls only shows for authenticated users)
-2. Check that sidebar component has been updated with new navigation item
-3. Restart development server after updating sidebar
-
-**Issue: Poll statistics showing incorrect data**
-**Solution:**
-1. Verify poll data structure in Firestore matches expected format
-2. Check that vote counts are being calculated correctly
-3. Ensure `totalVotes` field is properly updated when users vote
+### **Modal Improvements:**
+- **Responsive Sizing**: All modals (sign-in, export, boost, points info) now have proper mobile/desktop dimensions
+- **Touch-Friendly**: Minimum 44px button heights for mobile accessibility
+- **Proper Spacing**: Adjusted padding and margins for different screen sizes
+- **Scrollable Content**: Long content scrolls properly within modal bounds

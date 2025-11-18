@@ -2,12 +2,13 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Clock, Users, TrendingUp, Vote, Lock, LogIn, ChevronRight, X, Star, RefreshCw, Globe } from 'lucide-react'
+import { Clock, Users, TrendingUp, Vote, Lock, LogIn, ChevronRight, X, Star, RefreshCw, Globe, GraduationCap } from 'lucide-react'
 import { getFeedPolls, submitVote, getUserVotesForPoll } from '../../lib/db-service'
 import { useAuth } from '../../lib/auth-context'
 import { awardPoints, calculatePoints, awardPollCompletionPoints } from '../../lib/points-service'
 import { hasUserCompletedPoll, hasReceivedPollCompletionPoints, hasUserVotedOnPoll } from '../../lib/db-service'
 import { BoostModal } from './boost-modal'
+import { useRouter } from 'next/navigation'
 
 // Match the actual Poll interface from db-service
 interface Poll {
@@ -17,6 +18,7 @@ interface Poll {
   ownerName?: string
   ownerUid: string
   ownerImage?: string
+  ownerCollege?: string // NEW: Add college info
   questions?: Array<{
     id: string
     question: string
@@ -57,6 +59,7 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
     pollId: null
   })
   const loadingRef = useRef(false) // Prevent multiple simultaneous loads
+  const router = useRouter()
 
   // Don't load polls if user is not authenticated
   const loadPolls = async () => {
@@ -280,8 +283,7 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
             
             console.log('✅ Poll completion points awarded:', pointsAwarded)
             
-            // REMOVED: No more alert messages for successful point awards
-            // Show points award silently through UI updates only
+            // REMOVED: No alert for successful point awards - handled silently
           } else {
             console.log('📊 Poll not yet fully completed by user')
           }
@@ -298,7 +300,7 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
     } catch (error) {
       console.error('❌ Error submitting vote:', error)
       
-      // Show specific error messages based on error type
+      // Keep error alerts for important feedback
       if (error.message?.includes('already voted')) {
         alert('You have already voted on this question.')
       } else if (error.message?.includes('Permission denied')) {
@@ -348,8 +350,7 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
           
           console.log('✅ Poll completion points awarded:', pointsAwarded)
           
-          // REMOVED: No more alert messages for successful submissions
-          // Points will be shown through UI updates and animations
+          // REMOVED: No alert for successful submissions - handled silently
 
           // Close modal and refresh
           closeVotingModal()
@@ -431,6 +432,11 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
 
   const handleBoostClose = () => {
     setBoostModal({ isOpen: false, pollId: null })
+  }
+
+  const handleProfileClick = (e: React.MouseEvent, ownerUid: string) => {
+    e.stopPropagation() // Prevent opening the voting modal
+    router.push(`/profile/${ownerUid}`)
   }
 
   return (
@@ -540,11 +546,15 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
 
                 <div className="p-3 sm:p-4">
                   <div className="flex items-center gap-3 sm:gap-4">
-                    {/* User Profile - Responsive */}
+                    {/* User Profile - Responsive and Clickable */}
                     <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-                      <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden flex-shrink-0 ${
-                        isBoosted ? 'ring-2 ring-yellow-400/50' : 'bg-primary/10'
-                      }`}>
+                      <div 
+                        className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all ${
+                          isBoosted ? 'ring-2 ring-yellow-400/50' : 'bg-primary/10'
+                        }`}
+                        onClick={(e) => handleProfileClick(e, poll.ownerUid)}
+                        title="View profile"
+                      >
                         {poll.ownerImage ? (
                           <img 
                             src={poll.ownerImage} 
@@ -572,11 +582,21 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
                       
                       {/* User Info - Hidden on mobile to save space */}
                       <div className="hidden sm:block min-w-0">
-                        <div className={`font-medium text-sm truncate ${
-                          isBoosted ? 'text-yellow-800' : 'text-foreground'
-                        }`}>
+                        <div 
+                          className={`font-medium text-sm truncate cursor-pointer hover:underline ${
+                            isBoosted ? 'text-yellow-800' : 'text-foreground'
+                          }`}
+                          onClick={(e) => handleProfileClick(e, poll.ownerUid)}
+                        >
                           {pollOwner}
                         </div>
+                        {/* College name if available */}
+                        {poll.ownerCollege && (
+                          <div className="text-xs text-muted-foreground truncate flex items-center gap-1">
+                            <GraduationCap className="w-3 h-3" />
+                            {poll.ownerCollege}
+                          </div>
+                        )}
                         <div className="text-xs text-muted-foreground">
                           {createdAt.toLocaleDateString()}
                         </div>
@@ -689,7 +709,11 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
               {/* Header - Responsive */}
               <div className="flex items-center justify-between p-4 sm:p-6 border-b border-border bg-muted/20">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden flex-shrink-0 bg-primary/10">
+                  <div 
+                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden flex-shrink-0 bg-primary/10 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
+                    onClick={() => router.push(`/profile/${selectedPoll.ownerUid}`)}
+                    title="View profile"
+                  >
                     {selectedPoll.ownerImage ? (
                       <img 
                         src={selectedPoll.ownerImage} 
@@ -711,9 +735,25 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
                   </div>
                   <div className="min-w-0 flex-1">
                     <h2 className="text-lg sm:text-xl font-bold text-foreground truncate">{selectedPoll.title}</h2>
-                    <p className="text-xs sm:text-sm text-muted-foreground truncate">
-                      by {selectedPoll.ownerName} • {selectedPoll.totalVotes} votes
-                    </p>
+                    <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+                      <span 
+                        className="cursor-pointer hover:underline"
+                        onClick={() => router.push(`/profile/${selectedPoll.ownerUid}`)}
+                      >
+                        by {selectedPoll.ownerName}
+                      </span>
+                      {selectedPoll.ownerCollege && (
+                        <>
+                          <span>•</span>
+                          <span className="flex items-center gap-1">
+                            <GraduationCap className="w-3 h-3" />
+                            {selectedPoll.ownerCollege}
+                          </span>
+                        </>
+                      )}
+                      <span>•</span>
+                      <span>{selectedPoll.totalVotes} votes</span>
+                    </div>
                   </div>
                 </div>
                 <button

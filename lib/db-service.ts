@@ -21,59 +21,75 @@ import type { Poll, Vote, DataRequest, User, PollOption } from './db-types'
 
 // User operations
 export async function getUserData(uid: string) {
-  const userDoc = await getDoc(doc(db, 'users', uid))
-  return userDoc.data() as User | undefined
-}
-
-export async function createUserData(uid: string, user: Partial<User>) {
-  await setDoc(doc(db, 'users', uid), {
-    uid,
-    displayName: user.displayName,
-    email: user.email,
-    photoURL: user.photoURL,
-    points: 30, // UPDATED: Changed from 40 to 30 points
-    completedPolls: [], // NEW: Track completed polls for points
-    createdAt: serverTimestamp(),
-    settings: {
-      emailNotifications: true,
-      profileVisibility: true // Default to visible
-    },
-    profile: {
-      bio: '',
-      college: '',
-      course: '',
-      year: '',
-      location: '',
-      interests: []
-    }
-  })
-}
-
-// Add function to get user profile for display
-export async function getUserProfile(uid: string) {
   try {
-    const userDoc = await getDoc(doc(db, 'users', uid))
-    if (!userDoc.exists()) return null
+    console.log('🔍 getUserData: Fetching user data for UID:', uid)
     
-    const userData = userDoc.data() as User
+    const userDocRef = doc(db, 'users', uid)
+    const userDoc = await getDoc(userDocRef)
     
-    // Only return profile info if visibility is enabled
-    if (!userData.settings?.profileVisibility) {
-      return {
-        displayName: userData.displayName,
-        photoURL: null, // Hide profile picture
-        profile: null // Hide profile details
-      }
+    if (!userDoc.exists()) {
+      console.log('❌ getUserData: User document not found for UID:', uid)
+      return null
     }
+    
+    const userData = userDoc.data()
+    console.log('✅ getUserData: User data found:', userData.displayName || userData.email)
     
     return {
-      displayName: userData.displayName,
-      photoURL: userData.photoURL,
-      profile: userData.profile
+      uid: userDoc.id,
+      ...userData,
+      createdAt: userData.createdAt || null
     }
   } catch (error) {
-    console.error('Error getting user profile:', error)
-    return null
+    console.error('❌ getUserData: Error fetching user data:', error)
+    throw error
+  }
+}
+
+// NEW: Function to check if a user's profile is publicly visible
+export async function isProfilePublic(uid: string): Promise<boolean> {
+  try {
+    const userData = await getUserData(uid)
+    if (!userData) return false
+    
+    // Profile is public by default, or if explicitly set to true
+    return userData.settings?.profileVisibility !== false
+  } catch (error) {
+    console.error('❌ Error checking profile visibility:', error)
+    return false
+  }
+}
+
+// NEW: Function to get public profile data (respects visibility settings)
+export async function getPublicProfileData(uid: string, requestingUserUid?: string) {
+  try {
+    console.log('🔍 getPublicProfileData: Fetching for UID:', uid, 'requested by:', requestingUserUid)
+    
+    const userData = await getUserData(uid)
+    if (!userData) {
+      console.log('❌ getPublicProfileData: User not found')
+      return null
+    }
+    
+    // If it's the user's own profile, return full data
+    if (requestingUserUid === uid) {
+      console.log('✅ getPublicProfileData: Own profile, returning full data')
+      return userData
+    }
+    
+    // Check if profile is publicly visible
+    const isPublic = userData.settings?.profileVisibility !== false
+    if (!isPublic) {
+      console.log('❌ getPublicProfileData: Profile is private')
+      return { isPrivate: true }
+    }
+    
+    console.log('✅ getPublicProfileData: Profile is public, returning data')
+    return userData
+    
+  } catch (error) {
+    console.error('❌ getPublicProfileData: Error:', error)
+    throw error
   }
 }
 
@@ -292,10 +308,11 @@ export async function getFeedPolls() {
     console.log('Project ID:', db.app.options.projectId)
     
     const pollsCollection = collection(db, 'polls')
-    console.log('📊 Fetching polls from Firestore...')
+    console.log('📊 Fetching all polls from Firestore...')
     
     const snapshot = await getDocs(pollsCollection)
-    console.log('✅ getDocs completed, snapshot size:', snapshot.size)
+    console.log('✅ getDocs completed successfully')
+    console.log('📈 Snapshot size:', snapshot.size)
     
     if (snapshot.empty) {
       console.log('📭 No polls found in database')
@@ -303,17 +320,42 @@ export async function getFeedPolls() {
     }
 
     const polls = []
-    snapshot.docs.forEach((doc, index) => {
+    const userProfiles = new Map() // Cache user profiles to avoid duplicate fetches
+    
+    for (const doc of snapshot.docs) {
       try {
         const data = doc.data()
-        console.log(`📋 Processing poll ${index + 1}:`, doc.id)
+        console.log(`📋 Processing poll ${polls.length + 1}:`, doc.id)
         
         if (data.visible === true && data.questions && Array.isArray(data.questions)) {
+          // Get user profile data for college info
+          let ownerCollege = null
+          if (data.ownerUid && !userProfiles.has(data.ownerUid)) {
+            try {
+              const userData = await getPublicProfileData(data.ownerUid)
+              if (userData && !userData.isPrivate) {
+                ownerCollege = userData.profile?.college
+                userProfiles.set(data.ownerUid, userData)
+              } else {
+                userProfiles.set(data.ownerUid, null) // Cache null for private profiles
+              }
+            } catch (userError) {
+              console.warn('Could not fetch user data for:', data.ownerUid)
+              userProfiles.set(data.ownerUid, null) // Cache null to avoid retry
+            }
+          } else if (userProfiles.has(data.ownerUid)) {
+            const userData = userProfiles.get(data.ownerUid)
+            if (userData && !userData.isPrivate) {
+              ownerCollege = userData.profile?.college
+            }
+          }
+
           const poll = {
             pollId: doc.id,
             ownerUid: data.ownerUid || 'unknown',
             ownerName: data.ownerName || 'Anonymous',
             ownerImage: data.ownerImage,
+            ownerCollege: ownerCollege, // Include college info if profile is public
             title: data.title || 'Untitled',
             description: data.description,
             questions: data.questions,
@@ -327,14 +369,14 @@ export async function getFeedPolls() {
             boostHours: data.boostHours || 0
           }
           polls.push(poll)
-          console.log('✅ Added poll to results:', poll.title, poll.boosted ? '(BOOSTED)' : '')
+          console.log('✅ Added poll to results:', poll.title, poll.boosted ? '(BOOSTED)' : '', ownerCollege ? `(${ownerCollege})` : '')
         } else {
           console.log('❌ Skipped poll (invalid structure):', doc.id)
         }
       } catch (docError) {
         console.error(`❌ Error processing poll ${doc.id}:`, docError)
       }
-    })
+    }
 
     // Sort by boost status first, then by date (boosted polls at top)
     polls.sort((a, b) => {
@@ -725,5 +767,46 @@ export async function hasUserVotedOnPoll(userUid: string, pollId: string): Promi
   } catch (error) {
     console.error('❌ Error checking user vote status:', error)
     return false
+  }
+}
+
+// NEW: Create or update user document with initial data
+export async function createUserData(uid: string, userData: any) {
+  try {
+    console.log('🔄 createUserData: Creating user document for UID:', uid)
+    
+    const userDocRef = doc(db, 'users', uid)
+    
+    // Check if user document already exists
+    const existingDoc = await getDoc(userDocRef)
+    if (existingDoc.exists()) {
+      console.log('✅ createUserData: User document already exists, updating...')
+      // Update existing document with new data
+      await updateDoc(userDocRef, {
+        ...userData,
+        updatedAt: serverTimestamp()
+      })
+    } else {
+      console.log('📝 createUserData: Creating new user document...')
+      // Create new document
+      await setDoc(userDocRef, {
+        ...userData,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        points: userData.points || 30, // Default starting points
+        completedPolls: [],
+        settings: {
+          profileVisibility: true, // Default to public
+          emailNotifications: true
+        },
+        profile: userData.profile || {}
+      })
+    }
+    
+    console.log('✅ createUserData: User document created/updated successfully')
+    return true
+  } catch (error) {
+    console.error('❌ createUserData: Error creating user document:', error)
+    throw error
   }
 }
