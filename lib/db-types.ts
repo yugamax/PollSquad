@@ -11,6 +11,7 @@ export interface PollQuestion {
   question: string
   options: PollOption[]
   totalVotes: number
+  allowMultiple?: boolean // NEW: Allow multiple selections for this question
 }
 
 export interface Poll {
@@ -23,11 +24,12 @@ export interface Poll {
   questions: PollQuestion[]
   tags: string[]
   totalVotes: number
-  voters: string[] // NEW: Track who has voted on this poll
   createdAt: Date
   expiresAt?: Date
   boostedUntil?: Date
   visible: boolean
+  voters?: string[] // Track users who have voted
+  allowMultipleChoices?: boolean // NEW: Global setting for the entire poll
 }
 
 export interface Vote {

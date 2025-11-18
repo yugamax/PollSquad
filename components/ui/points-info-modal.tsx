@@ -168,6 +168,10 @@ export function PointsInfoModal({ isOpen, onClose, currentPoints }: PointsInfoMo
                       <span>Every 5 consecutive poll completions earn +10 bonus points</span>
                     </div>
                     <div className="flex items-start gap-2 text-sm">
+                      <span className="text-warning mt-0.5">•</span>
+                      <span><strong>Poll creators can vote on their own polls but won't earn points</strong></span>
+                    </div>
+                    <div className="flex items-start gap-2 text-sm">
                       <span className="text-success mt-0.5">•</span>
                       <span>Points cannot be transferred between accounts</span>
                     </div>

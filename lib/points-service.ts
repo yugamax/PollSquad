@@ -1,4 +1,4 @@
-import { updateDoc, doc, increment, serverTimestamp, arrayUnion } from 'firebase/firestore'
+import { updateDoc, doc, increment, serverTimestamp, arrayUnion, getDoc } from 'firebase/firestore'
 import { db } from './firebase'
 import { getUserData } from './db-service' // ADD: Missing import
 
@@ -15,6 +15,16 @@ export const POINTS_CONFIG = {
 export async function awardPollCompletionPoints(userUid: string, pollId: string, totalVotes: number = 0) {
   try {
     console.log(`🎯 Attempting to award points for poll completion: user ${userUid}, poll ${pollId}`)
+    
+    // NEW: Check if user is the poll owner - no points for own polls
+    const pollDoc = await getDoc(doc(db, 'polls', pollId))
+    if (pollDoc.exists()) {
+      const pollData = pollDoc.data()
+      if (pollData.ownerUid === userUid) {
+        console.log('⚠️ User is poll owner - no points awarded for voting on own poll')
+        return 0
+      }
+    }
     
     // Get user data to check completion history
     const userData = await getUserData(userUid)

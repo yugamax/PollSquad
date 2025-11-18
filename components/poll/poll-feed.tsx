@@ -115,23 +115,15 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
     try {
       for (const poll of pollList) {
         if (poll.questions) {
-          // First check if user has voted at all using voters array
-          const hasVotedOnPoll = await hasUserVotedOnPoll(user.uid, poll.pollId)
-          
-          if (!hasVotedOnPoll) {
-            console.log(`⚠️ User ${user.uid} not in voters array for poll ${poll.pollId}, skipping detailed check`)
-            continue
-          }
-          
           votes[poll.pollId] = {}
-          console.log(`🗳️ User in voters array, checking detailed votes for poll: ${poll.pollId} (${poll.title})`)
+          console.log(`🗳️ Checking votes for poll: ${poll.pollId} (${poll.title})`)
           
-          // Get detailed votes only if user is in voters array
+          // Get detailed votes for this user on this poll
           const questionVotes = await getUserVotesForPoll(user.uid, poll.pollId)
           console.log(`📊 Raw votes for user ${user.uid} on poll ${poll.pollId}:`, questionVotes)
           
           for (const question of poll.questions) {
-            // Filter to get votes for this specific question
+            // Filter to get votes for this specific question from this specific user
             const userQuestionVotes = questionVotes.filter(v => 
               v.questionId === question.id && 
               v.userUid === user.uid  // Extra safety check
@@ -178,15 +170,32 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
   }, [polls.length])
 
   const handleToggleOption = (pollId: string, questionId: string, optionId: string) => {
+    // UPDATED: Remove isOwner restriction - allow owners to vote
     if (!user || userVotes[pollId]?.[questionId]) return
+    
+    const poll = polls.find(p => p.pollId === pollId)
+    const question = poll?.questions?.find(q => q.id === questionId)
+    
+    // Check if multiple selections are allowed for this question
+    const allowMultiple = question?.allowMultiple ?? poll?.allowMultipleChoices ?? false
     
     setSelectedOptions(prev => ({
       ...prev,
       [pollId]: {
         ...prev[pollId],
-        [questionId]: prev[pollId]?.[questionId]?.includes(optionId)
-          ? prev[pollId][questionId].filter(id => id !== optionId)
-          : [...(prev[pollId]?.[questionId] || []), optionId]
+        [questionId]: (() => {
+          const currentSelections = prev[pollId]?.[questionId] || []
+          
+          if (allowMultiple) {
+            // Multiple choice: toggle the option
+            return currentSelections.includes(optionId)
+              ? currentSelections.filter(id => id !== optionId)
+              : [...currentSelections, optionId]
+          } else {
+            // Single choice: replace the selection
+            return currentSelections.includes(optionId) ? [] : [optionId]
+          }
+        })()
       }
     }))
   }
@@ -280,13 +289,17 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
     } catch (error) {
       console.error('❌ Error submitting vote:', error)
       
-      // Keep error alerts for important feedback
+      // Show specific error messages based on error type
       if (error.message?.includes('already voted')) {
         alert('You have already voted on this question.')
+      } else if (error.message?.includes('Permission denied')) {
+        alert('Permission denied. Please sign out and sign in again, then try voting.')
       } else if (error.code === 'permission-denied') {
-        alert('Permission denied. Please sign out and sign in again.')
+        alert('Permission denied. Please check your internet connection and try again.')
+      } else if (error.code === 'unavailable') {
+        alert('Database temporarily unavailable. Please try again in a moment.')
       } else {
-        alert(`Failed to submit vote: ${error.message}`)
+        alert(`Failed to submit vote: ${error.message || 'Unknown error'}`)
       }
     } finally {
       setVotingLoading(prev => ({ ...prev, [`${pollId}-${questionId}`]: false }))
@@ -571,9 +584,22 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
                   <div className="flex items-center gap-2 text-warning">
                     <Star className="w-4 h-4" />
                     <span className="text-sm sm:text-base font-medium">
-                      Earn 5 points for completing this entire poll (answer all questions)
+                      {selectedPoll.ownerUid === user.uid ? (
+                        "You can vote on your own poll but won't earn points"
+                      ) : (
+                        "Earn 5 points for completing this entire poll (answer all questions)"
+                      )}
                     </span>
                   </div>
+                  {selectedPoll.questions && selectedPoll.questions.length > 1 && (
+                    <div className="mt-2 text-xs text-warning/80">
+                      {selectedPoll.ownerUid === user.uid ? (
+                        "Poll creators can participate but don't receive point rewards"
+                      ) : (
+                        `Must answer all ${selectedPoll.questions.length} questions to earn points`
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -599,6 +625,9 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
                               : 0
                             const isSelected = selectedForQuestion.includes(option.id)
                             const userVotedForThis = hasVoted?.includes(option.id)
+                            
+                            // Check if multiple selections are allowed
+                            const allowMultiple = question.allowMultiple ?? selectedPoll.allowMultipleChoices ?? false
 
                             return (
                               <button
@@ -613,17 +642,21 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
                                   <div className="flex justify-between items-start sm:items-center relative z-10 mb-2">
                                     <div className="flex items-start sm:items-center gap-2 sm:gap-3 flex-1 min-w-0">
                                       {!hasVoted && (
-                                        <div className={`w-4 h-4 sm:w-5 sm:h-5 rounded border-2 transition-all flex-shrink-0 mt-0.5 sm:mt-0 ${
+                                        <div className={`w-4 h-4 sm:w-5 sm:h-5 ${allowMultiple ? 'rounded' : 'rounded-full'} border-2 transition-all flex-shrink-0 mt-0.5 sm:mt-0 ${
                                           isSelected ? 'bg-primary border-primary' : 'border-primary/30'
                                         } flex items-center justify-center`}>
                                           {isSelected && (
-                                            <span className="text-white text-xs font-bold leading-none">✓</span>
+                                            <span className="text-white text-xs font-bold leading-none">
+                                              {allowMultiple ? '✓' : '●'}
+                                            </span>
                                           )}
                                         </div>
                                       )}
                                       {userVotedForThis && (
-                                        <div className="w-4 h-4 sm:w-5 sm:h-5 bg-success border-2 border-success rounded flex items-center justify-center flex-shrink-0 mt-0.5 sm:mt-0">
-                                          <span className="text-white text-xs font-bold leading-none">✓</span>
+                                        <div className={`w-4 h-4 sm:w-5 sm:h-5 bg-success border-2 border-success ${allowMultiple ? 'rounded' : 'rounded-full'} flex items-center justify-center flex-shrink-0 mt-0.5 sm:mt-0`}>
+                                          <span className="text-white text-xs font-bold leading-none">
+                                            {allowMultiple ? '✓' : '●'}
+                                          </span>
                                         </div>
                                       )}
                                       <span className={`text-sm sm:text-base font-medium ${

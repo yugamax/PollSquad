@@ -110,7 +110,8 @@ export function PollCard({
   }, [user?.uid, pollId, questions]) // Track user.uid for account changes
 
   const handleToggleOption = (questionId: string, optionId: string) => {
-    if (userVotes[questionId] || isOwner || !user) return
+    // UPDATED: Remove isOwner restriction - allow owners to vote
+    if (userVotes[questionId] || !user) return
     
     setSelectedOptions(prev => ({
       ...prev,
@@ -332,14 +333,14 @@ export function PollCard({
                     <button
                       key={option.id}
                       onClick={() => handleToggleOption(question.id, option.id)}
-                      disabled={hasVotedThisQuestion || isOwner || !user}
+                      disabled={hasVotedThisQuestion || !user}
                       className={`w-full text-left group transition-all ${
-                        hasVotedThisQuestion || isOwner || !user ? 'cursor-not-allowed' : 'cursor-pointer'
+                        hasVotedThisQuestion || !user ? 'cursor-not-allowed' : 'cursor-pointer'
                       } ${isSelected || userVoted ? 'ring-2 ring-primary rounded-xl' : ''}`}
                     >
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
-                          {user && !hasVotedThisQuestion && !isOwner && (
+                          {user && !hasVotedThisQuestion && (
                             <div className={`w-4 h-4 rounded border-2 transition-all flex items-center justify-center ${
                               isSelected ? 'bg-primary border-primary' : 'border-primary/30 group-hover:border-primary'
                             }`}>
@@ -382,19 +383,20 @@ export function PollCard({
                 })}
               </div>
 
-              {/* Vote button */}
-              {user && !hasVotedThisQuestion && !isOwner && selectedForThisQuestion.length > 0 && (
+              {/* Vote button - UPDATED: Allow owners to vote */}
+              {user && !hasVotedThisQuestion && selectedForThisQuestion.length > 0 && (
                 <button
                   onClick={() => handleSubmitVote(question.id)}
                   disabled={loading}
                   className="w-full px-4 py-2 bg-primary text-white font-bold rounded-xl text-sm comic-shadow hover:comic-shadow-hover transition-all disabled:opacity-50"
                 >
                   {loading ? 'Voting...' : `✓ Vote${questions.length > 1 ? ` on Question ${qIndex + 1}` : ''}`}
+                  {isOwner && <span className="text-xs opacity-75 block">(No points for own poll)</span>}
                 </button>
               )}
 
               {/* Individual question vote button - only for single question polls */}
-              {questions.length === 1 && user && !hasVotedThisQuestion && !isOwner && selectedForThisQuestion.length > 0 && (
+              {questions.length === 1 && user && !hasVotedThisQuestion && selectedForThisQuestion.length > 0 && (
                 <button
                   onClick={() => handleSubmitVote(question.id)}
                   disabled={loading}
@@ -405,7 +407,7 @@ export function PollCard({
               )}
 
               {/* Multi-question: Individual question submit button */}
-              {questions.length > 1 && user && !hasVotedThisQuestion && !isOwner && selectedForThisQuestion.length > 0 && (
+              {questions.length > 1 && user && !hasVotedThisQuestion && selectedForThisQuestion.length > 0 && (
                 <button
                   onClick={() => handleSubmitVote(question.id)}
                   disabled={loading}

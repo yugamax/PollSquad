@@ -130,7 +130,146 @@ export async function updatePoll(pollId: string, updates: Partial<Poll>) {
 }
 
 export async function deletePoll(pollId: string) {
-  await deleteDoc(doc(db, 'polls', pollId))
+  try {
+    console.log('🗑️ Starting poll deletion process for:', pollId)
+    
+    // First, delete all votes associated with this poll
+    await deleteAllPollVotes(pollId)
+    
+    // Then delete the poll document
+    await deleteDoc(doc(db, 'polls', pollId))
+    
+    console.log('✅ Poll and all associated votes deleted successfully')
+  } catch (error) {
+    console.error('❌ Error deleting poll:', error)
+    throw error
+  }
+}
+
+// NEW: Delete all votes for a specific poll
+export async function deleteAllPollVotes(pollId: string) {
+  try {
+    console.log('🗑️ Deleting all votes for poll:', pollId)
+    
+    // Query all votes for this poll
+    const votesQuery = query(
+      collection(db, 'votes'),
+      where('pollId', '==', pollId)
+    )
+    
+    const votesSnapshot = await getDocs(votesQuery)
+    console.log(`📊 Found ${votesSnapshot.size} votes to delete`)
+    
+    // Delete all votes in batches for better performance
+    const deletePromises = votesSnapshot.docs.map(voteDoc => 
+      deleteDoc(doc(db, 'votes', voteDoc.id))
+    )
+    
+    await Promise.all(deletePromises)
+    console.log(`✅ Successfully deleted ${votesSnapshot.size} votes`)
+    
+    return votesSnapshot.size
+  } catch (error) {
+    console.error('❌ Error deleting poll votes:', error)
+    throw error
+  }
+}
+
+// NEW: Clean up user's completed polls array when poll is deleted
+export async function removeFromUserCompletedPolls(pollId: string) {
+  try {
+    console.log('🧹 Cleaning up user completed polls for deleted poll:', pollId)
+    
+    // Query all users who have this poll in their completedPolls array
+    const usersQuery = query(
+      collection(db, 'users'),
+      where('completedPolls', 'array-contains', pollId)
+    )
+    
+    const usersSnapshot = await getDocs(usersQuery)
+    console.log(`👥 Found ${usersSnapshot.size} users to update`)
+    
+    // Remove the poll from each user's completedPolls array
+    const updatePromises = usersSnapshot.docs.map(userDoc => {
+      const userData = userDoc.data()
+      const updatedCompletedPolls = (userData.completedPolls || []).filter(id => id !== pollId)
+      
+      return updateDoc(doc(db, 'users', userDoc.id), {
+        completedPolls: updatedCompletedPolls,
+        lastUpdated: serverTimestamp()
+      })
+    })
+    
+    await Promise.all(updatePromises)
+    console.log(`✅ Updated ${usersSnapshot.size} user records`)
+    
+    return usersSnapshot.size
+  } catch (error) {
+    console.error('❌ Error cleaning up user completed polls:', error)
+    throw error
+  }
+}
+
+// NEW: Delete all data requests for a specific poll
+export async function deletePollDataRequests(pollId: string) {
+  try {
+    console.log('🗑️ Deleting all data requests for poll:', pollId)
+    
+    const requestsQuery = query(
+      collection(db, 'requests'),
+      where('pollId', '==', pollId)
+    )
+    
+    const requestsSnapshot = await getDocs(requestsQuery)
+    console.log(`📋 Found ${requestsSnapshot.size} data requests to delete`)
+    
+    const deletePromises = requestsSnapshot.docs.map(requestDoc => 
+      deleteDoc(doc(db, 'requests', requestDoc.id))
+    )
+    
+    await Promise.all(deletePromises)
+    console.log(`✅ Deleted ${requestsSnapshot.size} data requests`)
+    
+    return requestsSnapshot.size
+  } catch (error) {
+    console.error('❌ Error deleting poll data requests:', error)
+    throw error
+  }
+}
+
+// UPDATED: Enhanced poll deletion with complete cleanup
+export async function deletePollWithCleanup(pollId: string) {
+  try {
+    console.log('🗑️ Starting complete poll deletion with cleanup for:', pollId)
+    
+    // Step 1: Delete all votes
+    const deletedVotes = await deleteAllPollVotes(pollId)
+    
+    // Step 2: Clean up user completed polls arrays
+    const updatedUsers = await removeFromUserCompletedPolls(pollId)
+    
+    // Step 3: Delete all data requests for this poll
+    const deletedRequests = await deletePollDataRequests(pollId)
+    
+    // Step 4: Finally delete the poll itself
+    await deleteDoc(doc(db, 'polls', pollId))
+    
+    console.log('✅ Complete poll deletion finished:', {
+      pollId,
+      deletedVotes,
+      updatedUsers,
+      deletedRequests
+    })
+    
+    return {
+      deletedVotes,
+      updatedUsers,
+      deletedRequests
+    }
+  } catch (error) {
+    console.error('❌ Error in complete poll deletion:', error)
+    throw error
+  }
 }
 
 export async function getPolls(constraints: QueryConstraint[] = []) {
@@ -236,23 +375,36 @@ export async function submitVote(vote: Omit<Vote, 'voteId' | 'createdAt'>) {
   console.log('🗳️ Submitting vote for user:', vote.userUid, 'on poll:', vote.pollId, 'question:', vote.questionId)
   
   try {
-    // CRITICAL FIX: Only check votes for THIS specific user
-    console.log('🔍 Checking if THIS USER has already voted...')
-    const userSpecificVotes = await getUserVotesForPoll(vote.userUid, vote.pollId)
-    const userAlreadyVoted = userSpecificVotes.some(v => 
-      v.questionId === vote.questionId && 
-      v.userUid === vote.userUid  // Ensure we're only checking this user's votes
+    // CRITICAL FIX: More precise vote checking
+    console.log('🔍 Checking if THIS SPECIFIC USER has already voted on THIS SPECIFIC QUESTION...')
+    
+    // Query for votes from this exact user on this exact question
+    const existingVoteQuery = query(
+      collection(db, 'votes'),
+      where('userUid', '==', vote.userUid),
+      where('pollId', '==', vote.pollId),
+      where('questionId', '==', vote.questionId)
     )
     
-    console.log('📊 User specific votes found:', userSpecificVotes.length)
-    console.log('❓ Has this user already voted on this question?', userAlreadyVoted)
+    const existingVoteSnapshot = await getDocs(existingVoteQuery)
     
-    if (userAlreadyVoted) {
-      console.log('⚠️ THIS USER has already voted on this question')
+    console.log('📊 Vote check results:', {
+      userUid: vote.userUid,
+      pollId: vote.pollId, 
+      questionId: vote.questionId,
+      existingVotes: existingVoteSnapshot.size
+    })
+    
+    if (existingVoteSnapshot.size > 0) {
+      console.log('⚠️ User has already voted on this specific question')
+      console.log('📋 Existing vote details:', existingVoteSnapshot.docs.map(doc => ({
+        id: doc.id,
+        data: doc.data()
+      })))
       throw new Error(`User ${vote.userUid} has already voted on question ${vote.questionId}`)
     }
 
-    console.log('✅ This user has NOT voted on this question, proceeding...')
+    console.log('✅ No existing vote found, proceeding with vote submission...')
 
     // Add the vote record with explicit user tracking
     const voteData = {
@@ -264,9 +416,18 @@ export async function submitVote(vote: Omit<Vote, 'voteId' | 'createdAt'>) {
     }
     
     console.log('📝 Creating vote document with data:', voteData)
-    const voteRef = await addDoc(collection(db, 'votes'), voteData)
     
-    console.log('✅ Vote recorded with ID:', voteRef.id)
+    let voteRef
+    try {
+      voteRef = await addDoc(collection(db, 'votes'), voteData)
+      console.log('✅ Vote recorded with ID:', voteRef.id)
+    } catch (voteError) {
+      console.error('❌ Error creating vote document:', voteError)
+      if (voteError.code === 'permission-denied') {
+        throw new Error('Permission denied when creating vote. Please check Firestore rules.')
+      }
+      throw voteError
+    }
 
     // Update poll question vote counts AND add user to voters list
     const poll = await getPoll(vote.pollId)
@@ -318,18 +479,37 @@ export async function submitVote(vote: Omit<Vote, 'voteId' | 'createdAt'>) {
         : [...currentVoters, vote.userUid]
       
       // Update the poll document with vote counts and voter tracking
-      await updatePoll(vote.pollId, {
-        questions: updatedQuestions,
-        totalVotes: newTotalVotes,
-        voters: updatedVoters // Track voters in poll document
-      })
-      
-      console.log('✅ Poll vote counts and voter list updated successfully')
+      try {
+        await updatePoll(vote.pollId, {
+          questions: updatedQuestions,
+          totalVotes: newTotalVotes,
+          voters: updatedVoters,
+          lastUpdated: serverTimestamp()
+        })
+        console.log('✅ Poll vote counts and voter list updated successfully')
+      } catch (updateError) {
+        console.error('❌ Error updating poll counts:', updateError)
+        if (updateError.code === 'permission-denied') {
+          throw new Error('Permission denied when updating poll counts. Please check Firestore rules.')
+        }
+        throw updateError
+      }
     }
     
     return voteRef.id
   } catch (error) {
     console.error('❌ Error submitting vote:', error)
+    
+    // Provide more specific error messages
+    if (error.code === 'permission-denied') {
+      console.error('🔒 Permission denied details:', error.message)
+      throw new Error('Permission denied. Please ensure you are signed in and try again.')
+    } else if (error.code === 'unavailable') {
+      throw new Error('Database temporarily unavailable. Please try again.')
+    } else if (error.message?.includes('already voted')) {
+      throw error // Re-throw as-is for duplicate vote detection
+    }
+    
     throw error
   }
 }
@@ -349,7 +529,7 @@ export async function getUserVotesForPoll(uid: string, pollId: string) {
     
     const votes = querySnapshot.docs.map(doc => {
       const data = doc.data()
-      console.log('📊 Found vote document:', doc.id, 'data:', data)
+      console.log('📊 Found vote document:', doc.id, 'userUid:', data.userUid, 'matches requested uid:', data.userUid === uid)
       return {
         ...data,
         voteId: doc.id,
@@ -359,10 +539,14 @@ export async function getUserVotesForPoll(uid: string, pollId: string) {
     
     console.log('📊 Total votes found for user', uid, 'on poll', pollId, ':', votes.length)
     
-    // Double-check that all votes belong to the requested user
+    // Extra validation to ensure all votes belong to the requested user
     const validVotes = votes.filter(vote => vote.userUid === uid)
     if (validVotes.length !== votes.length) {
-      console.warn('⚠️ Found votes that dont belong to requested user!')
+      console.warn('⚠️ Found votes that dont belong to requested user!', {
+        total: votes.length,
+        valid: validVotes.length,
+        requestedUid: uid
+      })
     }
     
     return validVotes
@@ -435,7 +619,8 @@ export async function hasUserCompletedPoll(userUid: string, pollId: string): Pro
       totalQuestions: poll.questions.length,
       votedQuestions: votedQuestionIds.size,
       completed: hasVotedOnAllQuestions,
-      inVotersArray: poll.voters.includes(userUid)
+      inVotersArray: poll.voters.includes(userUid),
+      isOwner: poll.ownerUid === userUid // NEW: Track if user is owner
     })
     
     return hasVotedOnAllQuestions

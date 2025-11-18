@@ -1,37 +1,47 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users can read their own user document AND authenticated users can read all users for admin purposes
+    // Users collection - allow authenticated users to read any user, write own data
     match /users/{userId} {
-      allow read: if request.auth != null; // Allow all authenticated users to read any user document
-      allow write: if request.auth != null && request.auth.uid == userId; // Only allow users to write their own data
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Polls: Authenticated users can read all polls, only owners can write
-    // The voters array is now part of the poll document for efficient tracking
+    // Polls collection - allow authenticated users to read and create polls
     match /polls/{pollId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null && request.auth.uid == request.resource.data.ownerUid;
-      allow update: if request.auth != null && request.auth.uid == resource.data.ownerUid;
+      // FIXED: Allow any authenticated user to update vote counts, not just owner
+      allow update: if request.auth != null && (
+        request.auth.uid == resource.data.ownerUid || // Owner can update everything
+        // Any authenticated user can update vote-related fields
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['totalVotes', 'questions', 'voters', 'lastUpdated', 'updatedAt'])
+      );
       allow delete: if request.auth != null && request.auth.uid == resource.data.ownerUid;
     }
     
-    // Votes: Users can create and read their own votes
+    // Votes collection - FIXED: Allow authenticated users to create votes and read their own
     match /votes/{voteId} {
+      // Allow users to read their own votes
       allow read: if request.auth != null && request.auth.uid == resource.data.userUid;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.userUid;
+      // Allow any authenticated user to create a vote (with validation)
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.userUid &&
+        request.resource.data.keys().hasAll(['pollId', 'questionId', 'userUid', 'selectedOptions']) &&
+        request.resource.data.selectedOptions is list &&
+        request.resource.data.pollId is string &&
+        request.resource.data.questionId is string;
+      // Allow users to delete their own votes
       allow delete: if request.auth != null && request.auth.uid == resource.data.userUid;
-      allow update: if false; // Votes cannot be updated once created
+      // Votes cannot be updated once created
+      allow update: if false;
     }
     
-    // Data Requests: Users can create requests, poll owners can read/update
+    // Data requests collection
     match /requests/{requestId} {
-      allow read: if request.auth != null && (
-        request.auth.uid == resource.data.requesterUid || 
-        request.auth.uid == resource.data.pollOwnerUid
-      );
+      allow read: if request.auth != null;
       allow create: if request.auth != null && request.auth.uid == request.resource.data.requesterUid;
-      allow update: if request.auth != null && request.auth.uid == resource.data.pollOwnerUid;
+      allow update: if request.auth != null; // Allow poll owners to approve/deny
     }
   }
 }

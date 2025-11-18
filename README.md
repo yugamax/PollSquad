@@ -420,6 +420,7 @@ firebase deploy --only hosting
 - **Starting Points**: 40 points for new accounts
 - **Poll Completion**: 5 points per fully completed poll (all questions answered)
 - **Consecutive Poll Bonus**: +10 additional points for every 5 consecutive poll completions
+- **Own Poll Voting**: Poll creators can vote on their own polls but receive no points
 - **One-Time Rewards**: Points awarded only once per poll, regardless of question count
 - **Boost Cost**: 60-240 points depending on boost duration
 
@@ -427,6 +428,12 @@ firebase deploy --only hosting
 - **6 Hours**: 60 points
 - **24 Hours**: 120 points
 - **72 Hours**: 240 points
+
+### Voting Rules
+- **Public Polls**: Any authenticated user can vote and earn points
+- **Own Polls**: Creators can participate in their own polls without point rewards
+- **Duplicate Prevention**: One vote per question per user, points awarded once per poll
+- **Completion Tracking**: Must answer all questions to be eligible for points
 
 ## API Endpoints
 

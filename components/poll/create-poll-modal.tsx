@@ -17,6 +17,9 @@ export function CreatePollModal({ isOpen, onClose, onSuccess }: CreatePollModalP
   const [options, setOptions] = useState(['', ''])
   const [tags, setTags] = useState('')
   const [loading, setLoading] = useState(false)
+  const [description, setDescription] = useState('')
+  const [questions, setQuestions] = useState([{ id: Date.now().toString(), question: '', options: [{ id: '1', text: '' }, { id: '2', text: '' }] }])
+  const [allowMultipleChoices, setAllowMultipleChoices] = useState(false)
 
   const handleAddOption = () => {
     setOptions([...options, ''])
@@ -39,35 +42,36 @@ export function CreatePollModal({ isOpen, onClose, onSuccess }: CreatePollModalP
     try {
       setLoading(true)
       
-      const pollId = await createPoll({
+      const pollData = {
         ownerUid: user.uid,
-        ownerName: user.displayName || 'Anonymous',
+        ownerName: user.displayName || user.email?.split('@')[0] || 'Anonymous',
         ownerImage: user.photoURL,
         title,
-        description: undefined,
-        questions: [{
-          id: 'q1',
-          question: title, // Use title as the question text
-          options: options.map((text, i) => ({
-            id: `q1_opt${i}`,
-            text: text.trim(),
-            votesCount: 0
-          })),
-          totalVotes: 0
-        }],
-        tags: tags.split(',').map(t => t.trim()).filter(t => t),
+        description: description || undefined,
+        questions: questions.map(q => ({
+          ...q,
+          allowMultiple: allowMultipleChoices // Apply global setting to all questions
+        })),
+        tags,
+        allowMultipleChoices, // Store global setting
         visible: true
-      })
+      }
+      
+      const pollId = await createPoll(pollData)
       console.log('✅ Poll created successfully:', pollId)
       
-      // REMOVED: No success alert message
-      // Close modal and refresh without showing alert
+      // Reset form
+      setTitle('')
+      setDescription('')
+      setQuestions([{ id: Date.now().toString(), question: '', options: [{ id: '1', text: '' }, { id: '2', text: '' }] }])
+      setTags([])
+      setAllowMultipleChoices(false)
+      
       onSuccess?.()
       onClose()
       
     } catch (error) {
       console.error('❌ Error creating poll:', error)
-      // Keep error alerts for important feedback
       alert('Failed to create poll. Please try again.')
     } finally {
       setLoading(false)
@@ -144,6 +148,36 @@ export function CreatePollModal({ isOpen, onClose, onSuccess }: CreatePollModalP
                   >
                     + Add Option
                   </button>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block font-bold mb-2 text-sm">Description (optional)</label>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Tell us more about this poll..."
+                    className="w-full px-4 py-3 rounded-2xl border-2 border-primary/20 focus:border-primary outline-none transition-colors"
+                  />
+                </div>
+
+                {/* Multiple Choice Setting */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={allowMultipleChoices}
+                      onChange={(e) => setAllowMultipleChoices(e.target.checked)}
+                      className="rounded border-border"
+                    />
+                    <span className="text-sm font-medium">Allow multiple selections per question</span>
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    {allowMultipleChoices 
+                      ? 'Users can select multiple options for each question (checkboxes)' 
+                      : 'Users can only select one option per question (radio buttons)'
+                    }
+                  </p>
                 </div>
 
                 {/* Tags */}
