@@ -2,45 +2,120 @@
 
 A modern, playful polling platform where users earn points by answering polls, can boost their own polls to the top, and request access to detailed poll data. Built with React, Next.js, Firebase, and a vibrant comic-style aesthetic.
 
+## 🎯 **NEW FEATURE: List-Based Poll Interface**
+
+### **Updated Poll Display Features:**
+- ✅ **List Layout** - Clean, scannable list of polls instead of cards
+- ✅ **Modal Voting** - Click any poll to open detailed voting window  
+- ✅ **Profile Integration** - Show user profile pictures and college info (if visible)
+- ✅ **Quick Poll Info** - Vote count, question count, and tags at a glance
+- ✅ **Voted Status** - Clear indicators for polls you've already voted on
+- ✅ **Multi-Question Support** - Handle single or multiple questions in modal
+
+### **User Profile Privacy:**
+- **Profile Visibility Setting** - Users control if their profile info is shown
+- **Conditional Display** - Profile pictures and college names only shown if enabled
+- **Privacy by Default** - Profile visibility defaults to enabled but can be disabled
+
+### **How the New UI Works:**
+1. **Poll List View**: Compact list showing poll title, creator, vote count, and quick stats
+2. **Click to Vote**: Click any poll row to open detailed voting modal
+3. **Modal Interface**: Full-screen voting experience with all questions and options
+4. **Real-time Updates**: Vote counts and status update immediately
+5. **Profile Privacy**: Respects user privacy settings for profile information
+
+### **Modal Voting Experience:**
+- **Poll Header**: Shows creator info, poll title, and total votes
+- **Question-by-Question**: Each question displayed separately with options
+- **Progress Bars**: Visual representation of current vote distribution  
+- **Individual Voting**: Submit votes for each question independently
+- **Status Indicators**: Clear feedback on voted vs unvoted questions
+
 ## Features
 
 ### Core Features
-- **Google Sign-In Authentication** - Secure auth with Firebase Authentication
-- **Poll Creation** - Create multi-option polls with tags and descriptions
-- **Vote & Earn Points** - Answer polls and earn points based on engagement
-- **Points System** - Earn bonus points for answering undersampled polls
-- **Boost Polls** - Spend points to push your polls to the top for 6-72 hours
-- **Export Results** - Download poll results as CSV or Excel files
-- **Data Access Requests** - Request access to detailed poll data with owner approval
-- **Real-time Feed** - See polls sorted by boost status and recency
-- **User Dashboard** - Track points, created polls, and voting history
+- **List-Based Poll Feed** - Clean, efficient browsing of available polls
+- **Modal Voting Interface** - Detailed voting experience in popup window
+- **Profile Privacy Controls** - Users control visibility of profile information
+- **Authentication-Required Voting** - Secure voting system for registered users
+- **Multi-Question Poll Support** - Handle complex polls with multiple questions
+- **Real-time Vote Tracking** - Live updates of vote counts and percentages
+- **Visual Progress Indicators** - Progress bars and percentage displays
+- **Responsive Design** - Works seamlessly on desktop and mobile
 
-### Technical Highlights
-- Comic-style UI with playful micro-interactions (Framer Motion)
-- Responsive design with Tailwind CSS
-- Real-time data synchronization via Firestore
-- Cloud Functions for email notifications
-- Row-level security with Firestore rules
-- Automatic point rewards and poll ranking
+### Privacy & Profile Features
+- **Profile Visibility Toggle** - Control whether profile info is public
+- **Selective Information Display** - Show/hide profile picture and college info
+- **Privacy-First Design** - No personal information shown without consent
+- **User-Controlled Data** - Full control over what others can see
 
-## Project Structure
+### Access Control Details
+- **Unauthenticated Access**: Login prompt only - no poll data visible
+- **Authenticated Access**: Full poll browsing, voting, creation, and management
+- **Data Security**: Complete protection of poll content and user data
+- **Privacy Protection**: User voting history and personal data secured
 
-\`\`\`
+### Voting System Details
+- **Secure Voting**: Only authenticated users can vote on polls
+- **Vote Validation**: Prevents duplicate votes on same question
+- **Real-time Updates**: Vote counts update immediately without page refresh
+- **Visual Indicators**: Selected options, voted status, and progress bars
+- **Points Rewards**: Earn points for every vote cast
+
+## 🚨 **CURRENT ISSUE RESOLVED: Firestore Permission & Auto-Refresh Fix**
+
+### **Problems Identified:**
+1. ✅ Dashboard shows data but auto-refreshes constantly
+2. ✅ Firestore permission denied errors
+3. ✅ "Missing or insufficient permissions" errors
+
+### **Solutions Applied:**
+- ✅ Updated Firestore security rules to allow public read access to polls
+- ✅ Added request deduplication to prevent refresh loops
+- ✅ Enhanced error handling for permission issues
+- ✅ Added proper loading state management
+
+### **Required Action:**
+**Deploy the updated Firestore rules:**
+```bash
+firebase deploy --only firestore:rules
+```
+
+### **Expected Result After Rule Deployment:**
+You should now see these logs in console:
+```
+🚀 DASHBOARD COMPONENT LOADING - IMPORT PATHS FIXED!
+🏠 Dashboard component rendered with original design
+🎯 PollFeed: useEffect triggered, loading polls...
+🔄 PollFeed: loadPolls called
+🎉 PollFeed: getFeedPolls returned: X polls
+```
+
+## Project Structure (Corrected)
+
+```
 pollsquad/
 ├── app/
-│   ├── page.tsx                 # Login page
+│   ├── page.tsx                 # Root page (redirects to dashboard)
 │   ├── dashboard/
-│   │   └── page.tsx             # Main dashboard
+│   │   └── page.tsx             # Main dashboard ✅ FIXED
+│   ├── create-poll/
+│   │   └── page.tsx             # Poll creation form
 │   ├── requests/
 │   │   └── page.tsx             # Data requests management
+│   ├── settings/
+│   │   └── page.tsx             # User settings
+│   ├── datasets/
+│   │   └── page.tsx             # Dataset downloads
 │   ├── layout.tsx               # Root layout with providers
 │   └── globals.css              # Comic theme & styles
 ├── components/
 │   ├── auth/
-│   │   ├── login-button.tsx     # Google Sign-In button
+│   │   ├── sign-in-modal.tsx    # Notification-style sign-in modal
 │   │   └── login-page.tsx       # Login page component
 │   ├── layout/
 │   │   ├── header.tsx           # Top navigation
+│   │   ├── sidebar.tsx          # Side navigation
 │   │   └── dashboard-layout.tsx # Dashboard wrapper with auth
 │   ├── poll/
 │   │   ├── poll-card.tsx        # Poll display & voting
@@ -49,15 +124,18 @@ pollsquad/
 │   │   ├── boost-modal.tsx      # Boost purchase modal
 │   │   ├── export-button.tsx    # CSV/XLSX export
 │   │   └── request-data-modal.tsx# Data access requests
-│   └── ui/                       # shadcn/ui components
+│   └── ui/                      # shadcn/ui components
 ├── lib/
-│   ├── firebase.ts              # Firebase config
-│   ├── auth-context.tsx         # Auth state management
+│   ├── firebase.ts              # Firebase config ✅
+│   ├── auth-context.tsx         # Auth state management ✅ CORRECT LOCATION
+│   ├── theme-context.tsx        # Theme management
 │   ├── db-types.ts              # TypeScript interfaces
-│   ├── db-service.ts            # Firestore CRUD operations
+│   ├── db-service.ts            # Firestore CRUD operations ✅
 │   ├── points-service.ts        # Points calculation logic
 │   ├── export-service.ts        # CSV/XLSX export helpers
 │   └── request-service.ts       # Data request operations
+├── types/                       # Type definitions (may not exist yet)
+├── contexts/                    # ❌ DOES NOT EXIST - this was the issue!
 ├── functions/                   # Cloud Functions
 │   ├── src/
 │   │   └── index.ts             # Email notifications
@@ -66,7 +144,114 @@ pollsquad/
 ├── firestore.rules              # Firestore security rules
 ├── firestore.indexes.json       # Firestore indexes
 └── .env.example                 # Environment variables template
-\`\`\`
+```
+
+## 🚀 **NEXT STEPS - Testing the Complete Fix**
+
+### Step 1: Test Dashboard Loading
+1. **Save all files** and restart dev server: `Ctrl+C` then `npm run dev`
+2. **Navigate to**: http://localhost:3000/dashboard
+3. **Check browser console** for these logs without errors
+
+### Step 2: Expected Behavior
+- ✅ Dashboard renders with original design
+- ✅ No "Cannot read properties of undefined" errors
+- ✅ PollFeed shows loading state, then either polls or "No polls available"
+- ✅ Refresh button works without errors
+
+### Step 3: Test Error Handling
+- If getFeedPolls fails, you should see a proper error message with "Try Again" button
+- If no polls exist, you should see "No Polls Available" message
+- Loading states should display properly
+
+## 🔧 **TROUBLESHOOTING - If Issues Persist**
+
+### Issue: Still getting "Cannot read properties of undefined"
+**Solution:**
+1. Check browser console for detailed error logs
+2. Verify getFeedPolls returns an array (check db-service.ts)
+3. Clear browser cache completely
+
+### Issue: Import errors in other components
+**Solution:**
+1. Update any remaining `@/` imports to relative paths
+2. Check TypeScript errors in VS Code
+3. Restart dev server after path changes
+
+### Issue: Polls not loading
+**Solution:**
+1. Check Firebase connection logs
+2. Verify Firestore security rules
+3. Test with manual poll creation
+
+## Firebase Firestore Security Rules
+
+Updated rules to support authenticated-only access:
+
+```javascript
+// Polls: Public read access for authenticated users only
+match /polls/{pollId} {
+  allow read: if request.auth != null; // Only authenticated users can read polls
+  allow write: if request.auth != null; // Only authenticated users can create/update
+}
+
+// Votes: Authenticated users can create and read their own votes
+match /votes/{voteId} {
+  allow read: if request.auth != null && request.auth.uid == resource.data.userUid;
+  allow create: if request.auth != null && request.auth.uid == request.resource.data.userUid;
+  allow delete: if request.auth != null && request.auth.uid == resource.data.userUid; // NEW: Allow vote deletion
+  allow update: if false; // Votes cannot be updated once created
+}
+```
+
+## Vote Management API
+
+1. **Vote Submission**: `submitVote()` records vote and updates poll counts
+2. **Vote Removal**: `removeVote()` deletes vote record and decreases counts
+3. **Vote Validation**: `getUserVotesForPoll()` tracks user voting history
+4. **Real-time Updates**: Vote counts reflect immediately in UI after any change
+
+## Updated Security Model
+
+The platform now implements **authentication-required access** for all poll data:
+
+1. **Landing Page**: Unauthenticated users see sign-in prompt with feature benefits
+2. **Poll Access**: All poll viewing requires authentication
+3. **Voting System**: Full voting functionality only available to signed-in users
+4. **Data Protection**: Complete privacy protection for poll content and user data
+5. **Engagement**: Clear value proposition encourages user registration
+
+## Voting API Workflow
+
+1. **Poll Display**: `getFeedPolls()` loads all visible polls
+2. **Vote Submission**: `submitVote()` records vote and updates poll counts  
+3. **Vote Validation**: `getUserVotesForPoll()` prevents duplicate voting
+4. **Points Award**: `awardPoints()` gives points for voting participation
+5. **Real-time Updates**: Vote counts reflect immediately in UI
+
+## Features
+
+### Core Features
+- **Google Sign-In Authentication** - Secure auth with Firebase Authentication via notification-style modal
+- **Multi-Question Polls** - Create polls with multiple questions under one title
+- **Vote & Earn Points** - Answer polls and earn points based on engagement
+- **Points System** - Earn bonus points for answering undersampled polls
+- **Boost Polls** - Spend points to push your polls to the top for 6-72 hours
+- **Export Results** - Download poll results as CSV or Excel files
+- **Data Access Requests** - Request access to detailed poll data with owner approval
+- **Real-time Feed** - See polls sorted by boost status and recency
+- **User Dashboard** - Track points, created polls, and voting history
+- **Guest Access** - First-time users can view the homepage and sign in directly via modal
+
+### Technical Highlights
+- Comic-style UI with playful micro-interactions (Framer Motion)
+- Responsive design with Tailwind CSS
+- Multi-question poll support with individual question voting
+- Real-time data synchronization via Firestore
+- Cloud Functions for email notifications
+- Row-level security with Firestore rules
+- Automatic point rewards and poll ranking
+- Seamless first-time user onboarding with notification-style sign-in modal
 
 ## Installation & Setup
 
@@ -160,6 +345,15 @@ firebase deploy --only hosting
   createdAt: Timestamp
   settings: {
     emailNotifications: boolean
+    profileVisibility: boolean // NEW: Control profile visibility
+  }
+  profile?: { // NEW: Extended profile information
+    bio?: string
+    college?: string
+    course?: string
+    year?: string
+    location?: string
+    interests?: string[]
   }
 }
 \`\`\`
@@ -172,8 +366,16 @@ firebase deploy --only hosting
   ownerName: string
   ownerImage?: string
   title: string
-  options: [
-    { id: string, text: string, votesCount: number }
+  description?: string
+  questions: [
+    {
+      id: string,
+      question: string,
+      options: [
+        { id: string, text: string, votesCount: number }
+      ],
+      totalVotes: number
+    }
   ]
   tags: string[]
   totalVotes: number
@@ -189,6 +391,7 @@ firebase deploy --only hosting
 {
   voteId: string (auto-generated)
   pollId: string
+  questionId: string
   userUid: string
   selectedOptions: string[]
   createdAt: Timestamp
@@ -203,6 +406,7 @@ firebase deploy --only hosting
   requesterUid: string
   requesterName: string
   requesterEmail: string
+  pollTitle: string
   status: 'pending' | 'approved' | 'denied'
   createdAt: Timestamp
   respondedAt?: Timestamp
@@ -292,6 +496,60 @@ Edit `components/poll/boost-modal.tsx` to add/remove boost options.
 - Check Gmail app-specific password is correct
 - Verify Firebase Functions environment variables
 
+### Polls not showing up after creation
+
+1. **Check browser console** for any JavaScript errors
+2. **Verify poll format** in Firestore - should have `questions` array, not `options`
+3. **Check Firestore security rules** allow read access to polls collection
+4. **Verify poll has `visible: true`** field in Firestore
+5. **Run the migration script** above if you have old format polls
+6. **Clear browser cache** and refresh the page
+7. **Check if polls exist** by running this query in Firebase Console:
+   ```javascript
+   // In Firebase Console > Firestore
+   db.collection('polls').where('visible', '==', true).limit(5).get()
+   ```
+8. **Test with a simple poll** - create a basic poll with just title and 2 options
+9. **Check network tab** in browser dev tools for failed API calls
+10. **Verify Firebase project ID** matches your environment variables
+
+### Common poll display issues
+
+**Issue: Polls created but dashboard shows "No polls available"**
+- Check browser console for getFeedPolls errors
+- Verify Firestore indexes are deployed: `firebase deploy --only firestore:indexes`
+- Ensure user has read permissions in firestore.rules
+- Test with different browser/incognito mode
+
+**Issue: Polls exist in Firestore but getFeedPolls returns empty array**
+- Check that polls have `visible: true` field
+- Verify `questions` array format (not old `options` format)
+- Check for JavaScript errors in poll processing
+- Test the getFeedPolls function directly in browser console
+
+### Poll creation fails with format errors
+
+1. **Ensure you're using the latest version** of the create poll components
+2. **Check that polls are being created with `questions` format** in Firestore
+3. **Verify all required fields** are filled (title, at least 2 options per question)
+4. **Check browser console** for detailed error messages
+
+### Firestore "invalid data" errors
+
+If you see errors like "Unsupported field value: undefined":
+
+1. **Update your code** to filter out undefined values before saving to Firestore
+2. **Use conditional object spreading** for optional fields:
+   ```javascript
+   const data = {
+     title: poll.title,
+     ...(poll.description && { description: poll.description }),
+     ...(poll.ownerImage && { ownerImage: poll.ownerImage })
+   }
+   ```
+3. **Never pass `undefined` directly** to Firestore - use `null` or omit the field entirely
+4. **Check your createPoll function** follows the updated format that filters undefined values
+
 ## Future Enhancements
 
 - [ ] Leaderboard page with top users
@@ -310,5 +568,3 @@ MIT License - feel free to use this for your projects!
 ## Support
 
 For issues or questions, please open an GitHub issue or contact support.
-#   P o l l S q u a d  
- 

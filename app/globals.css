@@ -101,6 +101,16 @@
     @apply text-foreground transition-colors duration-200;
     background: transparent;
     min-height: 100vh;
+    background-image: url('/color1bg.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+  }
+  
+  /* Dark mode background */
+  .dark body {
+    background-image: url('/nocolor1bg.png');
   }
   
   h1, h2, h3, h4, h5, h6 {
@@ -122,6 +132,21 @@
     @apply text-foreground;
   }
 
+  /* Ensure content is readable over background */
+  .min-h-screen {
+    position: relative;
+  }
+
+  /* Add subtle overlay for better text readability if needed */
+  .content-overlay {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(2px);
+    border-radius: 0.5rem;
+  }
+
+  .dark .content-overlay {
+    background: rgba(0, 0, 0, 0.95);
+  }
 }
 
 @layer utilities {
@@ -241,6 +266,28 @@
     align-items: center;
     justify-content: center;
     width: 100%;
+  }
+
+  /* Add custom responsive classes */
+  @media (min-width: 475px) {
+    .xs\:inline {
+      display: inline;
+    }
+    
+    .xs\:hidden {
+      display: none;
+    }
+  }
+
+  /* Improve mobile poll list spacing */
+  @media (max-width: 640px) {
+    .mobile-poll-compact {
+      padding: 0.75rem;
+    }
+    
+    .mobile-modal-padding {
+      padding: 1rem;
+    }
   }
 }
 

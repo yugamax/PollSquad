@@ -35,14 +35,17 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode
-}>) {
+}) {
+  console.log('🌐 RootLayout rendering')
+  
   return (
     <html lang="en">
       <body className={`font-sans antialiased min-h-screen`}>
         <ThemeProvider>
           <AuthProvider>
+            {console.log('🔗 AuthProvider wrapping children')}
             {children}
           </AuthProvider>
         </ThemeProvider>

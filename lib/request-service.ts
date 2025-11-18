@@ -15,13 +15,15 @@ export async function submitDataRequest(
   pollId: string,
   requesterUid: string,
   requesterName: string,
-  requesterEmail: string
+  requesterEmail: string,
+  pollTitle: string
 ): Promise<string> {
   const reqRef = await addDoc(collection(db, 'requests'), {
     pollId,
     requesterUid,
     requesterName,
     requesterEmail,
+    pollTitle,
     status: 'pending',
     createdAt: serverTimestamp()
   })

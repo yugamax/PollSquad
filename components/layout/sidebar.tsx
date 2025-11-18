@@ -39,22 +39,15 @@ export const Sidebar = forwardRef<{ toggleSidebar: () => void }, SidebarProps>(
 
     const handleSignOut = async () => {
       try {
-        if (signOut) {
-          await signOut()
-        } else {
-          // Fallback: clear localStorage and redirect
-          localStorage.clear()
-          sessionStorage.clear()
-        }
-        router.push('/login')
+        await signOut()
         closeSidebar()
+        // Redirect to dashboard (which will show homepage for unauthenticated users)
+        router.push('/dashboard')
       } catch (error) {
         console.error('Sign out error:', error)
-        // Fallback on error
-        localStorage.clear()
-        sessionStorage.clear()
-        router.push('/login')
+        // Force redirect even on error
         closeSidebar()
+        router.push('/dashboard')
       }
     }
 
@@ -164,7 +157,9 @@ export const Sidebar = forwardRef<{ toggleSidebar: () => void }, SidebarProps>(
                     onClick={() => handleNavigation(item.href)}
                     className={`
                       w-full flex items-center gap-3 px-3 py-2 sm:px-4 sm:py-3 rounded-xl text-left transition-all
-                      ${isActive ? 'bg-primary text-white shadow-lg' : 'text-foreground hover:bg-card/50'}
+                      ${isActive 
+                        ? 'bg-primary text-white shadow-lg' 
+                        : 'text-foreground hover:bg-card/50'}
                     `}
                   >
                     <Icon className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" />

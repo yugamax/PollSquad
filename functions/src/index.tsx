@@ -85,6 +85,21 @@ export const onRequestApproved = functions.firestore
 
       if (!requesterEmail || !poll) return
 
+      // Build results summary from questions format
+      let resultsHtml = ''
+      if (poll.questions && Array.isArray(poll.questions)) {
+        resultsHtml = poll.questions.map((q: any) => `
+          <div style="margin: 10px 0;">
+            <strong>${q.question}</strong>
+            <ul>
+              ${q.options.map((opt: any) => `
+                <li>${opt.text}: ${opt.votesCount} votes</li>
+              `).join('')}
+            </ul>
+          </div>
+        `).join('')
+      }
+
       const mailOptions = {
         from: process.env.GMAIL_SERVICE_ACCOUNT_EMAIL,
         to: requesterEmail,
@@ -96,11 +111,7 @@ export const onRequestApproved = functions.firestore
           <h3>Poll: ${poll.title}</h3>
           
           <p><strong>Results Summary:</strong></p>
-          <ul>
-            ${poll.options.map((opt: any) => `
-              <li>${opt.text}: ${opt.votesCount} votes</li>
-            `).join('')}
-          </ul>
+          ${resultsHtml}
           
           <div style="margin: 20px 0;">
             <a href="${process.env.NEXT_PUBLIC_APP_URL}/results/${pollId}" style="

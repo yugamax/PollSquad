@@ -1,4 +1,4 @@
-import { updateDoc, doc, increment, serverTimestamp } from 'firebase/firestore'
+import { updateDoc, doc, increment, serverTimestamp, addDoc, collection } from 'firebase/firestore'
 import { db } from './firebase'
 
 export const POINTS_CONFIG = {
@@ -42,5 +42,3 @@ export function calculatePoints(totalVotes: number, isStreak: boolean = false): 
   
   return points
 }
-
-import { addDoc, collection } from 'firebase/firestore'

@@ -1,3 +1,43 @@
+import { Timestamp } from 'firebase/firestore'
+
+export interface PollOption {
+  id: string
+  text: string
+  votesCount: number
+}
+
+export interface PollQuestion {
+  id: string
+  question: string
+  options: PollOption[]
+  totalVotes: number
+}
+
+export interface Poll {
+  pollId: string
+  ownerUid: string
+  ownerName: string
+  ownerImage?: string
+  title: string
+  description?: string
+  questions: PollQuestion[]
+  tags: string[]
+  totalVotes: number
+  createdAt: Date
+  expiresAt?: Date
+  boostedUntil?: Date
+  visible: boolean
+}
+
+export interface Vote {
+  voteId: string
+  pollId: string
+  questionId: string
+  userUid: string
+  selectedOptions: string[]
+  createdAt: Date
+}
+
 export interface User {
   uid: string
   displayName: string
@@ -7,38 +47,16 @@ export interface User {
   createdAt: Date
   settings: {
     emailNotifications: boolean
+    profileVisibility: boolean // New field
   }
-}
-
-export interface PollOption {
-  id: string
-  text: string
-  votesCount: number
-}
-
-export interface Poll {
-  pollId: string
-  ownerUid: string
-  ownerName: string
-  ownerImage?: string
-  title: string
-  body?: string
-  options: PollOption[]
-  tags: string[]
-  totalVotes: number
-  createdAt: Date
-  expiresAt?: Date
-  boostedUntil?: Date
-  visible: boolean
-  imageUrl?: string
-}
-
-export interface Vote {
-  voteId: string
-  pollId: string
-  userUid: string
-  selectedOptions: string[]
-  createdAt: Date
+  profile?: { // New profile section
+    bio?: string
+    college?: string
+    course?: string
+    year?: string
+    location?: string
+    interests?: string[]
+  }
 }
 
 export interface DataRequest {
@@ -47,17 +65,9 @@ export interface DataRequest {
   requesterUid: string
   requesterName: string
   requesterEmail: string
+  pollTitle: string
   status: 'pending' | 'approved' | 'denied'
   createdAt: Date
   respondedAt?: Date
   approverUid?: string
-}
-
-export interface Export {
-  exportId: string
-  pollId: string
-  ownerUid: string
-  format: 'csv' | 'xlsx'
-  fileUrl: string
-  createdAt: Date
 }

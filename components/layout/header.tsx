@@ -1,10 +1,12 @@
 'use client'
 
-import { useAuth } from '@/lib/auth-context'
-import { getUserData } from '@/lib/db-service'
+// Fix: Use relative paths
+import { useAuth } from '../../lib/auth-context'
+import { getUserData } from '../../lib/db-service'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import type { User } from '@/lib/db-types'
+// Fix: Use relative path for types
+import type { User } from '../../lib/db-types'
 
 export function Header() {
   const { user } = useAuth()

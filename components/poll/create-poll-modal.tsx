@@ -43,13 +43,18 @@ export function CreatePollModal({ isOpen, onClose, onSuccess }: CreatePollModalP
         ownerName: user.displayName || 'Anonymous',
         ownerImage: user.photoURL,
         title,
-        options: options.map((text, i) => ({
-          id: `opt${i}`,
-          text: text.trim(),
-          votesCount: 0
-        })),
+        description: undefined,
+        questions: [{
+          id: 'q1',
+          question: title, // Use title as the question text
+          options: options.map((text, i) => ({
+            id: `q1_opt${i}`,
+            text: text.trim(),
+            votesCount: 0
+          })),
+          totalVotes: 0
+        }],
         tags: tags.split(',').map(t => t.trim()).filter(t => t),
-        totalVotes: 0,
         visible: true
       })
 

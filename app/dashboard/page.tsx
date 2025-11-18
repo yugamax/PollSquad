@@ -1,26 +1,31 @@
 'use client'
 
-import { DashboardLayout } from '@/components/layout/dashboard-layout'
-import { PollFeed } from '@/components/poll/poll-feed'
+// Fix: Use relative paths instead of @/ alias
+import { DashboardLayout } from '../../components/layout/dashboard-layout'
+import { PollFeed } from '../../components/poll/poll-feed'
 import { motion } from 'framer-motion'
 import { useState, useCallback } from 'react'
 
 export default function DashboardPage() {
+  console.log('🚀 DASHBOARD COMPONENT LOADING - IMPORT PATHS FIXED!')
+  console.log('🏠 Dashboard component rendered with original design')
+  
   const [pollsUpdated, setPollsUpdated] = useState(0)
 
   const handlePollsRefresh = useCallback(() => {
+    console.log('🔄 Dashboard: handlePollsRefresh called')
     setPollsUpdated(prev => prev + 1)
   }, [])
 
   return (
     <DashboardLayout>
-      {/* Welcome Section - Responsive */}
+      {/* Welcome Section - Responsive with background overlay */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="mb-8 sm:mb-12 text-center"
       >
-        <div className="card-elevated p-4 sm:p-8 mb-6 sm:mb-8">
+        <div className="card-elevated content-overlay p-4 sm:p-8 mb-6 sm:mb-8">
           <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4 text-primary">
             Discover Polls
           </h2>
@@ -30,7 +35,7 @@ export default function DashboardPage() {
         </div>
       </motion.div>
 
-      {/* Polls Feed - Responsive */}
+      {/* Polls Feed - Responsive with background considerations */}
       <div className="relative">
         <PollFeed key={pollsUpdated} onRefresh={handlePollsRefresh} showRandomPolls />
       </div>
