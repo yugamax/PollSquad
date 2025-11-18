@@ -5,8 +5,11 @@ import { DashboardLayout } from '../../components/layout/dashboard-layout'
 import { ProfilePictureUpload } from '../../components/ui/profile-picture-upload'
 import { useAuth } from '../../lib/auth-context'
 import { getUserData } from '../../lib/db-service'
-import { useState, useEffect } from 'react'
-import { Save, AlertCircle, X } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Save, AlertCircle, X, ExternalLink, MapPin, Search } from 'lucide-react'
+import { indianCities, searchCities } from '../../lib/indian-cities'
+import { updateDoc, doc, serverTimestamp } from 'firebase/firestore'
+import { db } from '../../lib/firebase'
 
 export default function ProfilePage() {
   const { user, userPoints, refreshUserData } = useAuth()
@@ -14,15 +17,24 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState({
     displayName: user?.displayName || '',
     bio: '',
-    school: '',
+    college: '',
     course: '',
     year: '',
     location: '',
+    linkedin: '', // NEW: LinkedIn field
     interests: []
   })
   const [originalProfile, setOriginalProfile] = useState(profile)
   const [hasChanges, setHasChanges] = useState(false)
   const [showNotification, setShowNotification] = useState(false)
+  const [saving, setSaving] = useState(false)
+  
+  // NEW: City search functionality
+  const [citySearch, setCitySearch] = useState('')
+  const [showCityDropdown, setShowCityDropdown] = useState(false)
+  const [filteredCities, setFilteredCities] = useState(indianCities.slice(0, 10))
+  const cityInputRef = useRef<HTMLInputElement>(null)
+  
   const [userStats, setUserStats] = useState({
     pollsCreated: 0,
     pollsCompleted: 0,
@@ -33,10 +45,11 @@ export default function ProfilePage() {
     const initial = {
       displayName: user?.displayName || '',
       bio: '',
-      school: '',
+      college: '',
       course: '',
       year: '',
       location: '',
+      linkedin: '', // NEW: LinkedIn field
       interests: []
     }
     setProfile(initial)
@@ -108,14 +121,77 @@ export default function ProfilePage() {
     setDisplayPoints(userPoints)
   }, [userPoints])
 
+  // NEW: Handle city search
+  useEffect(() => {
+    const filtered = searchCities(citySearch)
+    setFilteredCities(filtered)
+  }, [citySearch])
+
+  // NEW: Load existing profile data
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (user) {
+        try {
+          const userData = await getUserData(user.uid)
+          if (userData?.profile) {
+            const profileData = {
+              displayName: user.displayName || '',
+              bio: userData.profile.bio || '',
+              college: userData.profile.college || '',
+              course: userData.profile.course || '',
+              year: userData.profile.year || '',
+              location: userData.profile.location || '',
+              linkedin: userData.profile.linkedin || '',
+              interests: userData.profile.interests || []
+            }
+            setProfile(profileData)
+            setOriginalProfile(profileData)
+            setCitySearch(userData.profile.location || '')
+          }
+        } catch (error) {
+          console.error('Error loading profile:', error)
+        }
+      }
+    }
+    
+    loadProfile()
+  }, [user])
+
   const handleSave = async () => {
+    if (!user) return
+    
     try {
+      setSaving(true)
       console.log('Saving profile:', profile)
+      
+      // Update Firestore user document
+      const userDocRef = doc(db, 'users', user.uid)
+      await updateDoc(userDocRef, {
+        displayName: profile.displayName,
+        profile: {
+          bio: profile.bio,
+          college: profile.college,
+          course: profile.course,
+          year: profile.year,
+          location: profile.location,
+          linkedin: profile.linkedin,
+          interests: profile.interests
+        },
+        updatedAt: serverTimestamp()
+      })
+      
       setOriginalProfile(profile)
       setHasChanges(false)
       setShowNotification(false)
+      
+      // Show success message
+      alert('Profile updated successfully!')
+      
     } catch (error) {
       console.error('Error saving profile:', error)
+      alert('Failed to save profile. Please try again.')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -127,6 +203,25 @@ export default function ProfilePage() {
 
   const updateProfile = (field: string, value: string) => {
     setProfile(prev => ({ ...prev, [field]: value }))
+  }
+
+  const handleCitySelect = (city: string) => {
+    updateProfile('location', city)
+    setCitySearch(city)
+    setShowCityDropdown(false)
+  }
+
+  // NEW: Fix city search input to update both states
+  const handleCityInputChange = (value: string) => {
+    setCitySearch(value)
+    updateProfile('location', value) // Keep location in sync with search input
+    setShowCityDropdown(true)
+  }
+
+  const validateLinkedIn = (url: string) => {
+    if (!url) return true
+    const linkedinPattern = /^https?:\/\/(www\.)?linkedin\.com\/in\/[a-zA-Z0-9-]+\/?$/
+    return linkedinPattern.test(url)
   }
 
   return (
@@ -192,7 +287,7 @@ export default function ProfilePage() {
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
-                Display Name
+                Display Name *
               </label>
               <input
                 type="text"
@@ -200,6 +295,7 @@ export default function ProfilePage() {
                 onChange={(e) => updateProfile('displayName', e.target.value)}
                 className="w-full px-4 py-3 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
                 placeholder="Your display name"
+                required
               />
             </div>
 
@@ -219,12 +315,12 @@ export default function ProfilePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  School/University
+                  College/University
                 </label>
                 <input
                   type="text"
-                  value={profile.school}
-                  onChange={(e) => updateProfile('school', e.target.value)}
+                  value={profile.college}
+                  onChange={(e) => updateProfile('college', e.target.value)}
                   className="w-full px-4 py-3 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
                   placeholder="Where do you study?"
                 />
@@ -264,19 +360,101 @@ export default function ProfilePage() {
                 </select>
               </div>
 
-              <div>
+              {/* NEW: Indian Cities Dropdown */}
+              <div className="relative">
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  Location
+                  <MapPin className="w-4 h-4 inline mr-1" />
+                  City (India)
                 </label>
-                <input
-                  type="text"
-                  value={profile.location}
-                  onChange={(e) => updateProfile('location', e.target.value)}
-                  className="w-full px-4 py-3 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                  placeholder="City, Country"
-                />
+                <div className="relative">
+                  <input
+                    ref={cityInputRef}
+                    type="text"
+                    value={citySearch}
+                    onChange={(e) => handleCityInputChange(e.target.value)}
+                    onFocus={() => setShowCityDropdown(true)}
+                    onBlur={() => {
+                      // Delay to allow dropdown click
+                      setTimeout(() => setShowCityDropdown(false), 200)
+                    }}
+                    className="w-full px-4 py-3 pr-10 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+                    placeholder="Search for your city..."
+                  />
+                  <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  
+                  {/* Dropdown */}
+                  {showCityDropdown && (
+                    <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {filteredCities.length > 0 ? (
+                        filteredCities.map((city, index) => (
+                          <button
+                            key={index}
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()} // Prevent input blur
+                            onClick={() => handleCitySelect(city)}
+                            className="w-full text-left px-4 py-2 hover:bg-muted text-foreground text-sm first:rounded-t-lg last:rounded-b-lg transition-colors"
+                          >
+                            {city}
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-4 py-2 text-muted-foreground text-sm">
+                          No cities found
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
+
+            {/* NEW: LinkedIn Profile */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                <ExternalLink className="w-4 h-4 inline mr-1" />
+                LinkedIn Profile
+              </label>
+              <input
+                type="url"
+                value={profile.linkedin}
+                onChange={(e) => updateProfile('linkedin', e.target.value)}
+                className={`w-full px-4 py-3 border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors ${
+                  profile.linkedin && !validateLinkedIn(profile.linkedin)
+                    ? 'border-red-500 focus:border-red-500'
+                    : 'border-border focus:border-primary'
+                }`}
+                placeholder="https://linkedin.com/in/your-profile"
+              />
+              {profile.linkedin && !validateLinkedIn(profile.linkedin) && (
+                <p className="text-red-500 text-xs mt-1">
+                  Please enter a valid LinkedIn profile URL
+                </p>
+              )}
+              <p className="text-muted-foreground text-xs mt-1">
+                Enter your full LinkedIn profile URL (e.g., https://linkedin.com/in/yourname)
+              </p>
+            </div>
+
+            {/* Save Button */}
+            {hasChanges && (
+              <div className="flex gap-3 pt-4 border-t border-border">
+                <button
+                  onClick={handleDiscard}
+                  disabled={saving}
+                  className="px-4 py-2 border border-border text-foreground rounded-lg hover:bg-muted transition-colors disabled:opacity-50"
+                >
+                  Discard Changes
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving || (profile.linkedin && !validateLinkedIn(profile.linkedin))}
+                  className="flex items-center gap-2 px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+                >
+                  <Save className="w-4 h-4" />
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

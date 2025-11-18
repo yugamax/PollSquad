@@ -753,30 +753,37 @@ To avoid future issues:
 window.location.href = '/dashboard'
 ```
 
-## 🔧 **RECENT FIXES: Sign-In Modal & Profile Features**
+## 🔧 **NEW FEATURES: Enhanced Profile System & Privacy Controls**
 
-### **Issues Resolved:**
-- ✅ **Sign-In Modal Fixed** - Removed GitHub option and fixed `handleSignIn is not defined` error
-- ✅ **Google Sign-In Only** - Simplified authentication to use only Google OAuth
-- ✅ **Profile Viewing Added** - Users can click profile pictures to view other users' profiles
-- ✅ **College Information** - Display college names in polls when users make profiles visible
-- ✅ **Modal Dimensions** - All popup windows now have responsive dimensions for mobile and desktop
+### **Features Added:**
+- ✅ **LinkedIn Integration** - Users can add their LinkedIn profile URL to their profile
+- ✅ **Indian Cities Dropdown** - Smart search dropdown with all major Indian cities
+- ✅ **Enhanced Privacy Controls** - Simplified public/private profile visibility options
+- ✅ **Profile Information Protection** - Private profiles only show name and bio to others
+- ✅ **Real-time Profile Updates** - Changes save immediately to Firestore
+- ✅ **URL Validation** - LinkedIn URLs are validated for correct format
 
-### **Sign-In System Changes:**
-- **Single Provider**: Now only uses Google Sign-In for simplicity and reliability
-- **Error Handling**: Proper error messages and loading states in sign-in modal
-- **Function Names**: Fixed `handleSignIn` reference error by using correct `handleGoogleSignIn`
-- **Responsive Design**: Sign-in modal works perfectly on both mobile and desktop
+### **Privacy System Changes:**
+- **Public Profiles**: Full profile visible (name, bio, college, course, year, location, LinkedIn, stats, polls)
+- **Private Profiles**: Only name and bio visible to others, with clear "profile is private" message
+- **Removed "Friends Only"**: Simplified to just public/private options for better UX
+- **Settings Integration**: Profile visibility controlled from Settings page with real-time updates
 
-### **Profile Features Added:**
-- **Clickable Profiles**: Click any profile picture in polls to view user's public profile
-- **College Display**: Shows college name under username if user has set profile as visible
-- **Privacy Controls**: Users can control whether their profile information is public
-- **Public Profile Page**: `/profile/[uid]` route for viewing other users' profiles
-- **Profile Statistics**: Shows polls created, votes received, points earned, and polls completed
+### **LinkedIn Integration:**
+- **URL Validation**: Ensures proper LinkedIn profile URL format
+- **External Link**: Clickable link that opens in new tab
+- **Visual Indicator**: Blue LinkedIn-style icon and coloring
+- **Optional Field**: Not required, only shows if provided by user
 
-### **Modal Improvements:**
-- **Responsive Sizing**: All modals (sign-in, export, boost, points info) now have proper mobile/desktop dimensions
-- **Touch-Friendly**: Minimum 44px button heights for mobile accessibility
-- **Proper Spacing**: Adjusted padding and margins for different screen sizes
-- **Scrollable Content**: Long content scrolls properly within modal bounds
+### **Indian Cities Features:**
+- **Smart Search**: Type to filter through 100+ Indian cities
+- **Alphabetical Sorting**: Cities displayed in alphabetical order
+- **Major Coverage**: Includes metro cities, state capitals, and important towns
+- **Search Performance**: Limits results to 10 for better performance
+- **Keyboard Friendly**: Full keyboard navigation support
+
+### **Technical Improvements:**
+- **Firestore Integration**: Profile data properly saved and retrieved from database
+- **Real-time Updates**: Changes reflect immediately without page refresh
+- **Error Handling**: Proper validation and error messages for all fields
+- **Responsive Design**: All new components work perfectly on mobile and desktop

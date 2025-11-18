@@ -4,9 +4,12 @@
 import { DashboardLayout } from '../../components/layout/dashboard-layout'
 import { useAuth } from '../../lib/auth-context'
 import { useTheme } from '../../lib/theme-context'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Moon, Sun, Trash2, Shield, Bell, Globe } from 'lucide-react'
+import { getUserData } from '../../lib/db-service'
+import { updateDoc, doc } from 'firebase/firestore'
+import { db } from '../../lib/firebase'
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth()
@@ -14,7 +17,65 @@ export default function SettingsPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [notifications, setNotifications] = useState(true)
-  const [privacy, setPrivacy] = useState('public')
+  const [profileVisibility, setProfileVisibility] = useState(true) // NEW: Handle profile visibility
+  const [loading, setLoading] = useState(false)
+
+  // Load user settings
+  useEffect(() => {
+    const loadSettings = async () => {
+      if (user) {
+        try {
+          const userData = await getUserData(user.uid)
+          if (userData?.settings) {
+            setNotifications(userData.settings.emailNotifications ?? true)
+            setProfileVisibility(userData.settings.profileVisibility ?? true)
+          }
+        } catch (error) {
+          console.error('Error loading settings:', error)
+        }
+      }
+    }
+    
+    loadSettings()
+  }, [user])
+
+  const handleNotificationsChange = async (enabled: boolean) => {
+    if (!user) return
+    
+    try {
+      setLoading(true)
+      const userDocRef = doc(db, 'users', user.uid)
+      await updateDoc(userDocRef, {
+        'settings.emailNotifications': enabled,
+        updatedAt: new Date()
+      })
+      setNotifications(enabled)
+    } catch (error) {
+      console.error('Error updating notifications:', error)
+      alert('Failed to update notification settings')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleProfileVisibilityChange = async (isPublic: boolean) => {
+    if (!user) return
+    
+    try {
+      setLoading(true)
+      const userDocRef = doc(db, 'users', user.uid)
+      await updateDoc(userDocRef, {
+        'settings.profileVisibility': isPublic,
+        updatedAt: new Date()
+      })
+      setProfileVisibility(isPublic)
+    } catch (error) {
+      console.error('Error updating profile visibility:', error)
+      alert('Failed to update profile visibility settings')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleDeleteAccount = async () => {
     if (deleteConfirmText !== 'DELETE') return
@@ -59,7 +120,8 @@ export default function SettingsPage() {
                   <input
                     type="checkbox"
                     checked={notifications}
-                    onChange={(e) => setNotifications(e.target.checked)}
+                    onChange={(e) => handleNotificationsChange(e.target.checked)}
+                    disabled={loading}
                     className="sr-only peer"
                   />
                   <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
@@ -81,18 +143,50 @@ export default function SettingsPage() {
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
+                <label className="block text-sm font-medium text-foreground mb-3">
                   Profile visibility
                 </label>
-                <select
-                  value={privacy}
-                  onChange={(e) => setPrivacy(e.target.value)}
-                  className="w-full p-3 border border-border rounded-lg bg-card text-foreground"
-                >
-                  <option value="public">Public</option>
-                  <option value="private">Private</option>
-                  <option value="friends">Friends only</option>
-                </select>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="radio"
+                      id="public"
+                      name="profileVisibility"
+                      checked={profileVisibility === true}
+                      onChange={() => handleProfileVisibilityChange(true)}
+                      disabled={loading}
+                      className="mt-0.5"
+                    />
+                    <div>
+                      <label htmlFor="public" className="text-sm font-medium text-foreground cursor-pointer">
+                        Public
+                      </label>
+                      <p className="text-xs text-muted-foreground">
+                        Anyone can view your profile details, college, course, location, LinkedIn, etc.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="radio"
+                      id="private"
+                      name="profileVisibility"
+                      checked={profileVisibility === false}
+                      onChange={() => handleProfileVisibilityChange(false)}
+                      disabled={loading}
+                      className="mt-0.5"
+                    />
+                    <div>
+                      <label htmlFor="private" className="text-sm font-medium text-foreground cursor-pointer">
+                        Private
+                      </label>
+                      <p className="text-xs text-muted-foreground">
+                        Only your name and bio are visible to others. College, location, LinkedIn and other details are hidden.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </motion.div>

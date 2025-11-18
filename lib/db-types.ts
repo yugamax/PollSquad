@@ -51,14 +51,15 @@ export interface User {
   createdAt: Date
   settings: {
     emailNotifications: boolean
-    profileVisibility: boolean // NEW: Control profile visibility
+    profileVisibility: boolean // NEW: Control profile visibility - true = public, false = private
   }
   profile?: { // NEW: Extended profile information
     bio?: string
     college?: string
     course?: string
     year?: string
-    location?: string
+    location?: string // Will store selected Indian city
+    linkedin?: string // NEW: LinkedIn profile URL
     interests?: string[]
   }
 }

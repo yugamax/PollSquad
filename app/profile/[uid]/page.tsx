@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation'
 import { DashboardLayout } from '../../../components/layout/dashboard-layout'
 import { useAuth } from '../../../lib/auth-context'
 import { getPublicProfileData, getUserPolls } from '../../../lib/db-service'
-import { Calendar, MapPin, GraduationCap, BookOpen, Users, BarChart3, Award } from 'lucide-react'
+import { Calendar, MapPin, GraduationCap, BookOpen, Users, BarChart3, Award, ExternalLink, Lock } from 'lucide-react'
 
 export default function PublicProfilePage() {
   const params = useParams()
@@ -108,6 +108,7 @@ export default function PublicProfilePage() {
   }
 
   const isOwnProfile = uid === currentUser?.uid
+  const isPublicProfile = profileUser?.settings?.profileVisibility !== false
   const userStats = {
     pollsCreated: userPolls.length,
     totalVotes: userPolls.reduce((sum, poll) => sum + (poll.totalVotes || 0), 0),
@@ -145,46 +146,74 @@ export default function PublicProfilePage() {
                 {profileUser?.displayName || profileUser?.email?.split('@')[0] || 'Anonymous User'}
               </h1>
               
-              {/* Profile Info */}
-              <div className="space-y-2 mb-4">
-                {profileUser?.profile?.college && (
-                  <div className="flex items-center justify-center md:justify-start gap-2 text-muted-foreground">
-                    <GraduationCap className="w-4 h-4" />
-                    <span>{profileUser.profile.college}</span>
-                  </div>
-                )}
-                
-                {profileUser?.profile?.course && (
-                  <div className="flex items-center justify-center md:justify-start gap-2 text-muted-foreground">
-                    <BookOpen className="w-4 h-4" />
-                    <span>{profileUser.profile.course}</span>
-                    {profileUser?.profile?.year && (
-                      <span className="text-xs bg-muted px-2 py-1 rounded-full">
-                        {profileUser.profile.year === 'graduate' ? 'Graduate' : 
-                         profileUser.profile.year === 'phd' ? 'PhD' : 
-                         `Year ${profileUser.profile.year}`}
-                      </span>
-                    )}
-                  </div>
-                )}
-                
-                {profileUser?.profile?.location && (
-                  <div className="flex items-center justify-center md:justify-start gap-2 text-muted-foreground">
-                    <MapPin className="w-4 h-4" />
-                    <span>{profileUser.profile.location}</span>
-                  </div>
-                )}
-                
-                <div className="flex items-center justify-center md:justify-start gap-2 text-muted-foreground">
-                  <Calendar className="w-4 h-4" />
-                  <span>Joined {new Date(profileUser?.createdAt?.seconds * 1000 || Date.now()).toLocaleDateString()}</span>
-                </div>
-              </div>
-
-              {/* Bio */}
+              {/* Bio - Always visible */}
               {profileUser?.profile?.bio && (
                 <div className="mb-4">
                   <p className="text-muted-foreground italic">"{profileUser.profile.bio}"</p>
+                </div>
+              )}
+
+              {/* Profile Info - Only visible if public profile OR own profile */}
+              {(isPublicProfile || isOwnProfile) ? (
+                <div className="space-y-2 mb-4">
+                  {profileUser?.profile?.college && (
+                    <div className="flex items-center justify-center md:justify-start gap-2 text-muted-foreground">
+                      <GraduationCap className="w-4 h-4" />
+                      <span>{profileUser.profile.college}</span>
+                    </div>
+                  )}
+                  
+                  {profileUser?.profile?.course && (
+                    <div className="flex items-center justify-center md:justify-start gap-2 text-muted-foreground">
+                      <BookOpen className="w-4 h-4" />
+                      <span>{profileUser.profile.course}</span>
+                      {profileUser?.profile?.year && (
+                        <span className="text-xs bg-muted px-2 py-1 rounded-full">
+                          {profileUser.profile.year === 'graduate' ? 'Graduate' : 
+                           profileUser.profile.year === 'phd' ? 'PhD' : 
+                           `Year ${profileUser.profile.year}`}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  
+                  {profileUser?.profile?.location && (
+                    <div className="flex items-center justify-center md:justify-start gap-2 text-muted-foreground">
+                      <MapPin className="w-4 h-4" />
+                      <span>{profileUser.profile.location}</span>
+                    </div>
+                  )}
+
+                  {/* NEW: LinkedIn Profile */}
+                  {profileUser?.profile?.linkedin && (
+                    <div className="flex items-center justify-center md:justify-start gap-2">
+                      <ExternalLink className="w-4 h-4 text-blue-600" />
+                      <a 
+                        href={profileUser.profile.linkedin}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 transition-colors hover:underline"
+                      >
+                        LinkedIn Profile
+                      </a>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center justify-center md:justify-start gap-2 text-muted-foreground">
+                    <Calendar className="w-4 h-4" />
+                    <span>Joined {new Date(profileUser?.createdAt?.seconds * 1000 || Date.now()).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              ) : (
+                /* Private Profile Message */
+                <div className="mb-4 p-4 bg-muted/20 border border-border rounded-lg">
+                  <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                    <Lock className="w-4 h-4" />
+                    <span className="font-medium">Private Profile</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    This user has set their profile to private. Only their name and bio are visible.
+                  </p>
                 </div>
               )}
 
@@ -203,79 +232,96 @@ export default function PublicProfilePage() {
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="card-elevated p-4 text-center">
-            <div className="text-2xl font-bold text-primary mb-1">{userStats.pollsCreated}</div>
-            <div className="text-sm text-muted-foreground">Polls Created</div>
+        {/* Stats Cards - Only show if public or own profile */}
+        {(isPublicProfile || isOwnProfile) && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="card-elevated p-4 text-center">
+              <div className="text-2xl font-bold text-primary mb-1">{userStats.pollsCreated}</div>
+              <div className="text-sm text-muted-foreground">Polls Created</div>
+            </div>
+            <div className="card-elevated p-4 text-center">
+              <div className="text-2xl font-bold text-accent mb-1">{userStats.totalVotes}</div>
+              <div className="text-sm text-muted-foreground">Total Votes</div>
+            </div>
+            <div className="card-elevated p-4 text-center">
+              <div className="text-2xl font-bold text-warning mb-1">{userStats.points}</div>
+              <div className="text-sm text-muted-foreground">Points</div>
+            </div>
+            <div className="card-elevated p-4 text-center">
+              <div className="text-2xl font-bold text-success mb-1">{userStats.completedPolls}</div>
+              <div className="text-sm text-muted-foreground">Polls Completed</div>
+            </div>
           </div>
-          <div className="card-elevated p-4 text-center">
-            <div className="text-2xl font-bold text-accent mb-1">{userStats.totalVotes}</div>
-            <div className="text-sm text-muted-foreground">Total Votes</div>
-          </div>
-          <div className="card-elevated p-4 text-center">
-            <div className="text-2xl font-bold text-warning mb-1">{userStats.points}</div>
-            <div className="text-sm text-muted-foreground">Points</div>
-          </div>
-          <div className="card-elevated p-4 text-center">
-            <div className="text-2xl font-bold text-success mb-1">{userStats.completedPolls}</div>
-            <div className="text-sm text-muted-foreground">Polls Completed</div>
-          </div>
-        </div>
+        )}
 
-        {/* User's Polls */}
-        <div className="card-elevated p-6">
-          <h2 className="text-xl font-semibold text-foreground mb-6 flex items-center gap-2">
-            <BarChart3 className="w-5 h-5" />
-            {isOwnProfile ? 'Your Polls' : `${profileUser?.displayName?.split(' ')[0] || 'User'}'s Polls`}
-          </h2>
-          
-          {userPolls.length === 0 ? (
-            <div className="text-center py-8">
-              <div className="w-12 h-12 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
-                <BarChart3 className="w-6 h-6 text-muted-foreground" />
-              </div>
-              <p className="text-muted-foreground">
-                {isOwnProfile ? "You haven't created any polls yet." : "This user hasn't created any public polls yet."}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {userPolls.slice(0, 5).map((poll, index) => (
-                <div key={poll.pollId} className="flex items-center justify-between p-4 bg-muted/20 rounded-lg">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-foreground truncate">{poll.title}</h3>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                      <span className="flex items-center gap-1">
-                        <Users className="w-3 h-3" />
-                        {poll.totalVotes || 0} votes
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <BarChart3 className="w-3 h-3" />
-                        {poll.questions?.length || 0} questions
-                      </span>
-                      <span>{new Date(poll.createdAt).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                  
-                  {/* Boost indicator */}
-                  {poll.boostedUntil && poll.boostedUntil > new Date() && (
-                    <div className="flex items-center gap-1 bg-yellow-200 text-yellow-800 px-2 py-1 rounded-full text-xs font-bold">
-                      <span>🚀</span>
-                      <span>Boosted</span>
-                    </div>
-                  )}
+        {/* User's Polls - Only show if public or own profile */}
+        {(isPublicProfile || isOwnProfile) && (
+          <div className="card-elevated p-6">
+            <h2 className="text-xl font-semibold text-foreground mb-6 flex items-center gap-2">
+              <BarChart3 className="w-5 h-5" />
+              {isOwnProfile ? 'Your Polls' : `${profileUser?.displayName?.split(' ')[0] || 'User'}'s Polls`}
+            </h2>
+            
+            {userPolls.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-12 h-12 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
+                  <BarChart3 className="w-6 h-6 text-muted-foreground" />
                 </div>
-              ))}
-              
-              {userPolls.length > 5 && (
-                <p className="text-center text-sm text-muted-foreground">
-                  ... and {userPolls.length - 5} more polls
+                <p className="text-muted-foreground">
+                  {isOwnProfile ? "You haven't created any polls yet." : "This user hasn't created any public polls yet."}
                 </p>
-              )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {userPolls.slice(0, 5).map((poll, index) => (
+                  <div key={poll.pollId} className="flex items-center justify-between p-4 bg-muted/20 rounded-lg">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-foreground truncate">{poll.title}</h3>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                        <span className="flex items-center gap-1">
+                          <Users className="w-3 h-3" />
+                          {poll.totalVotes || 0} votes
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <BarChart3 className="w-3 h-3" />
+                          {poll.questions?.length || 0} questions
+                        </span>
+                        <span>{new Date(poll.createdAt).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                    
+                    {/* Boost indicator */}
+                    {poll.boostedUntil && poll.boostedUntil > new Date() && (
+                      <div className="flex items-center gap-1 bg-yellow-200 text-yellow-800 px-2 py-1 rounded-full text-xs font-bold">
+                        <span>🚀</span>
+                        <span>Boosted</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                
+                {userPolls.length > 5 && (
+                  <p className="text-center text-sm text-muted-foreground">
+                    ... and {userPolls.length - 5} more polls
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Private Profile Polls Message */}
+        {!isPublicProfile && !isOwnProfile && (
+          <div className="card-elevated p-6 text-center">
+            <div className="w-12 h-12 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
+              <Lock className="w-6 h-6 text-muted-foreground" />
             </div>
-          )}
-        </div>
+            <h3 className="text-lg font-semibold mb-2">Profile Details Hidden</h3>
+            <p className="text-muted-foreground">
+              This user has chosen to keep their detailed information and polls private.
+            </p>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   )
