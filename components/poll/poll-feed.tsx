@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Clock, Users, TrendingUp, Vote, Lock, LogIn, ChevronRight, X, Star } from 'lucide-react'
+import { Clock, Users, TrendingUp, Vote, Lock, LogIn, ChevronRight, X, Star, RefreshCw } from 'lucide-react'
 import { getFeedPolls, submitVote, getUserVotesForPoll } from '../../lib/db-service'
 import { useAuth } from '../../lib/auth-context'
 import { awardPoints, calculatePoints, awardPollCompletionPoints } from '../../lib/points-service'
@@ -376,6 +376,22 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
     }
   }, [user, authLoading])
 
+  // Listen for manual refresh events
+  useEffect(() => {
+    const handleManualRefresh = () => {
+      console.log('🔄 PollFeed: Manual refresh event received')
+      loadPolls()
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('manualRefresh', handleManualRefresh)
+      
+      return () => {
+        window.removeEventListener('manualRefresh', handleManualRefresh)
+      }
+    }
+  }, [])
+
   return (
     <>
       <div className="space-y-6">
@@ -398,9 +414,10 @@ export function PollFeed({ onRefresh, showRandomPolls = false }: PollFeedProps) 
                 loadPolls()
                 onRefresh?.()
               }}
-              className="text-primary hover:underline font-medium text-sm sm:text-base"
+              className="flex items-center gap-2 bg-card/90 backdrop-blur-sm border border-border/30 text-foreground px-4 py-2 rounded-xl font-medium text-sm hover:bg-muted/70 transition-all hover:scale-105 shadow-sm"
             >
-              Refresh
+              <RefreshCw className="w-4 h-4" />
+              <span>Refresh</span>
             </button>
           </div>
         </div>

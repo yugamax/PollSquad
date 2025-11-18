@@ -21,6 +21,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [showSignInModal, setShowSignInModal] = useState(false)
   const [showPointsModal, setShowPointsModal] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
   const sidebarRef = useRef<{ toggleSidebar: () => void }>(null)
 
   useEffect(() => {
@@ -321,7 +322,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
         {/* Page Content - Adjust padding based on whether header exists */}
         <main className={`p-3 sm:p-6 ${isHomePage ? 'pt-4 sm:pt-6' : 'pt-8 sm:pt-12'} ${!isHomePage && user ? 'ml-0 sm:ml-16' : ''}`}>
-          <div className="max-w-7xl mx-auto">
+          <div className="max-w-7xl mx-auto" key={refreshKey}>
             {children}
           </div>
         </main>

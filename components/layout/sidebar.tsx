@@ -36,32 +36,32 @@ const navigation = [
     name: 'Home', 
     href: '/dashboard', 
     icon: Home, 
-    iconColor: 'text-primary',
-    bgColor: 'bg-primary/30 hover:bg-primary/40',
+    iconColor: 'text-foreground',
+    bgColor: 'bg-muted/60 hover:bg-muted/80',
     description: 'View community polls'
   },
   { 
     name: 'My Polls', 
     href: '/my-polls', 
     icon: BarChart3, 
-    iconColor: 'text-accent',
-    bgColor: 'bg-accent/30 hover:bg-accent/40',
+    iconColor: 'text-foreground',
+    bgColor: 'bg-muted/60 hover:bg-muted/80',
     description: 'Manage your polls'
   },
   { 
     name: 'Profile Settings', 
     href: '/profile', 
     icon: User, 
-    iconColor: 'text-success',
-    bgColor: 'bg-success/30 hover:bg-success/40',
+    iconColor: 'text-foreground',
+    bgColor: 'bg-muted/60 hover:bg-muted/80',
     description: 'Edit your profile'
   },
   { 
     name: 'Settings', 
     href: '/settings', 
     icon: Settings, 
-    iconColor: 'text-muted-foreground',
-    bgColor: 'bg-muted/40 hover:bg-muted/50',
+    iconColor: 'text-foreground',
+    bgColor: 'bg-muted/60 hover:bg-muted/80',
     description: 'App preferences'
   },
 ]
@@ -311,12 +311,12 @@ export const Sidebar = forwardRef<{ toggleSidebar: () => void }, SidebarProps>(
               {/* Theme toggle */}
               <button
                 onClick={toggleTheme}
-                className="w-full flex items-center gap-3 px-3 py-2 sm:px-4 sm:py-3 rounded-xl text-left transition-all text-foreground hover:bg-card/50 mt-4 sm:mt-6"
+                className="w-full flex items-center gap-3 px-3 py-2 sm:px-4 sm:py-3 rounded-xl text-left transition-all mt-4 sm:mt-6 bg-white hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-600"
               >
                 {theme === 'dark' ? (
-                  <Sun className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" />
+                  <Sun className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0 text-yellow-500" />
                 ) : (
-                  <Moon className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" />
+                  <Moon className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0 text-blue-600" />
                 )}
                 <span className="font-medium">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
               </button>
